@@ -9,7 +9,6 @@ Aplikasi web dashboard sederhana untuk membantu panitia TQQ Akbar UNESA melakuka
 - Pandas
 - OpenPyXL
 - Plotly
-- Groq API opsional
 
 ## Fitur Utama
 
@@ -22,7 +21,6 @@ Aplikasi web dashboard sederhana untuk membantu panitia TQQ Akbar UNESA melakuka
 - Panduan penggunaan berbentuk list
 - Filter hasil rekap
 - Export 1 file Excel dengan banyak sheet per Kode Kelas PAI
-- Analisis AI Groq opsional dengan tombol ON/OFF
 
 ## Kolom File Peserta
 
@@ -50,19 +48,6 @@ Aplikasi web dashboard sederhana untuk membantu panitia TQQ Akbar UNESA melakuka
 pip install -r requirements.txt
 streamlit run app.py
 ```
-
-## Groq API Opsional
-
-Buat file `.env` jika ingin memakai AI:
-
-```env
-GROQ_API_KEY0=gsk_xxx
-GROQ_API_KEY1=gsk_xxx
-GROQ_MODEL=openai/gpt-oss-120b
-```
-
-AI bisa dinyalakan lewat toggle di sidebar. Jika AI OFF, rekap dan export tetap berjalan normal.
-
 
 ## Update v12
 

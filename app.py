@@ -1,4 +1,3 @@
-import os
 import re
 import zipfile
 from difflib import SequenceMatcher
@@ -8,16 +7,12 @@ from typing import Dict, List, Tuple, Any
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from dotenv import load_dotenv
-
-load_dotenv()
 
 # ============================================================
 # KONFIGURASI UTAMA
 # ============================================================
 
 APP_TITLE = "Rekap Nilai TQQ Akbar UNESA"
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b").strip() or "openai/gpt-oss-120b"
 MODE_REKAP = "Mode Rekap Peserta & Nilai"
 MODE_RAPIKAN = "Mode Rapikan Hasil Rekap"
 
@@ -942,167 +937,6 @@ def export_per_kelas_zip(results: Dict[str, pd.DataFrame]) -> bytes:
     return zip_buffer.getvalue()
 
 
-def build_ai_prompt(results: Dict[str, pd.DataFrame]) -> str:
-    rekap = results["rekap"]
-    ringkasan = results["ringkasan"]
-    data_bermasalah = results["data_bermasalah"]
-    masalah_ringkasan = results["masalah_ringkasan"]
-
-    total_peserta = len(rekap)
-    total_sudah = int((rekap["status_nilai"] == "Sudah Ada Nilai").sum())
-    total_belum = int((rekap["status_nilai"] == "Belum Ada Nilai").sum())
-    total_perlu_dicek = int((rekap["status_validasi"] == "Perlu Dicek").sum())
-    persen = (total_sudah / total_peserta * 100) if total_peserta else 0
-    jumlah_kelas = rekap["kode_kelas_pai"].replace("", pd.NA).dropna().nunique()
-
-    top_belum = ringkasan.sort_values("Belum Ada Nilai", ascending=False).head(10)
-
-    prompt = f"""
-Kamu adalah asisten analisis data akademik untuk kegiatan TQQ Akbar UNESA.
-
-Berikan analisis singkat dan praktis berdasarkan statistik berikut:
-
-Total peserta: {total_peserta}
-Sudah ada nilai: {total_sudah}
-Belum ada nilai: {total_belum}
-Persentase selesai: {persen:.1f}%
-Jumlah kelas PAI: {jumlah_kelas}
-Peserta perlu dicek: {total_perlu_dicek}
-Jumlah baris data bermasalah: {len(data_bermasalah)}
-
-Ringkasan 10 kelas dengan peserta belum ada nilai terbanyak:
-{top_belum.to_string(index=False)}
-
-Ringkasan jenis masalah:
-{masalah_ringkasan.to_string(index=False) if not masalah_ringkasan.empty else "Tidak ada data bermasalah."}
-
-Tolong berikan:
-1. Ringkasan kondisi rekap.
-2. Prioritas tindakan panitia.
-3. Kelas yang perlu diprioritaskan.
-4. Saran validasi data.
-5. Risiko yang perlu diperhatikan.
-
-Jangan meminta data pribadi tambahan. Jangan menampilkan NIM atau nama mahasiswa.
-"""
-    return prompt.strip()
-
-# ============================================================
-# GROQ API KEY ROTATION
-# ============================================================
-
-def get_streamlit_secret(key: str, default: str = "") -> str:
-    try:
-        value = st.secrets.get(key, default)
-        return str(value).strip() if value else default
-    except Exception:
-        return default
-
-
-def get_groq_api_keys(manual_key: str = "", max_numbered_keys: int = 20) -> List[str]:
-    candidates: List[str] = []
-    manual_key = normalize_text(manual_key)
-    if manual_key:
-        candidates.append(manual_key)
-
-    for index in range(max_numbered_keys):
-        key_name = f"GROQ_API_KEY{index}"
-        secret_key = get_streamlit_secret(key_name, "")
-        env_key = normalize_text(os.environ.get(key_name, ""))
-        if secret_key:
-            candidates.append(secret_key)
-        if env_key:
-            candidates.append(env_key)
-
-    single_secret_key = get_streamlit_secret("GROQ_API_KEY", "")
-    single_env_key = normalize_text(os.environ.get("GROQ_API_KEY", ""))
-    if single_secret_key:
-        candidates.append(single_secret_key)
-    if single_env_key:
-        candidates.append(single_env_key)
-
-    unique_keys: List[str] = []
-    seen = set()
-    for key in candidates:
-        cleaned_key = key.strip().strip('"').strip("'")
-        if cleaned_key and cleaned_key not in seen:
-            unique_keys.append(cleaned_key)
-            seen.add(cleaned_key)
-    return unique_keys
-
-
-def get_error_status_code(exc: Exception) -> int:
-    return int(getattr(exc, "status_code", 0) or getattr(getattr(exc, "response", None), "status_code", 0) or 0)
-
-
-def explain_groq_error(exc: Exception) -> str:
-    status_code = get_error_status_code(exc)
-    text = str(exc)
-    if status_code == 429:
-        return "terkena rate limit"
-    if status_code == 401:
-        return "API key tidak valid/unauthorized"
-    if status_code == 400:
-        return "request tidak valid"
-    if status_code == 404:
-        return "model/endpoint tidak ditemukan"
-    if status_code in {408, 500, 502, 503, 504}:
-        return f"server/timeout error {status_code}"
-    if "rate limit" in text.lower():
-        return "terkena rate limit"
-    return f"gagal: {text[:160]}"
-
-
-def should_try_next_groq_key(exc: Exception) -> bool:
-    status_code = get_error_status_code(exc)
-    text = str(exc).lower()
-    if status_code in {401, 408, 429, 500, 502, 503, 504}:
-        return True
-    if "rate limit" in text or "quota" in text or "timeout" in text:
-        return True
-    if status_code in {400, 404}:
-        return False
-    return True
-
-
-def ask_groq_with_key_rotation(api_keys: List[str], model: str, prompt: str) -> Tuple[str, str, List[str]]:
-    if not api_keys:
-        raise ValueError("Tidak ada API key Groq yang tersedia.")
-
-    from groq import Groq
-
-    attempt_logs: List[str] = []
-    last_exception = None
-
-    for index, api_key in enumerate(api_keys):
-        key_label = f"GROQ_API_KEY{index}"
-        try:
-            client = Groq(api_key=api_key)
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "Kamu adalah asisten data akademik kampus. Jawab dalam bahasa Indonesia yang rapi, praktis, dan tidak bertele-tele.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.2,
-                max_tokens=900,
-            )
-            attempt_logs.append(f"{key_label}: berhasil digunakan.")
-            return response.choices[0].message.content, key_label, attempt_logs
-        except Exception as exc:
-            last_exception = exc
-            reason = explain_groq_error(exc)
-            attempt_logs.append(f"{key_label}: {reason}.")
-            if should_try_next_groq_key(exc):
-                continue
-            break
-
-    detail = "\n".join(attempt_logs)
-    raise RuntimeError("Semua API key Groq gagal digunakan. Detail percobaan:\n" + detail) from last_exception
-
 # ============================================================
 # STREAMLIT UI - WEB DASHBOARD STYLE
 # ============================================================
@@ -2018,40 +1852,6 @@ def render_export_page(results: Dict[str, pd.DataFrame]) -> None:
         )
 
 
-def render_ai_page(results: Dict[str, pd.DataFrame], ai_enabled: bool, detected_keys: List[str]) -> None:
-    st.markdown('<div class="section-title">🤖 Analisis AI Groq</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-caption">AI hanya menerima statistik ringkas, bukan seluruh data mahasiswa. Fitur ini opsional dan harus dijalankan dengan tombol.</div>', unsafe_allow_html=True)
-
-    if not ai_enabled:
-        st.info("Analisis AI sedang OFF. Aktifkan toggle di sidebar jika ingin memakai Groq AI.")
-        return
-
-    if not detected_keys:
-        st.warning("AI sudah ON, tetapi belum ada API key Groq yang terdeteksi.")
-        return
-
-    with st.container(border=True):
-        st.markdown("**Status AI**")
-        st.write(f"API key terdeteksi: **{len(detected_keys)}**")
-        st.write(f"Model aktif: `{GROQ_MODEL}`")
-        st.caption("Model dikunci dari UI. Ubah melalui `.env` atau Streamlit secrets jika diperlukan.")
-
-        if st.button("🤖 Buat Analisis AI", type="primary", use_container_width=True):
-            with st.spinner("Memanggil Groq AI dengan rotasi API key..."):
-                try:
-                    answer, used_key_label, logs = ask_groq_with_key_rotation(
-                        api_keys=detected_keys,
-                        model=GROQ_MODEL,
-                        prompt=build_ai_prompt(results),
-                    )
-                    st.success(f"Berhasil memakai {used_key_label}.")
-                    st.markdown(answer)
-                    with st.expander("Log percobaan API key", expanded=False):
-                        st.code("\n".join(logs), language="text")
-                except Exception as exc:
-                    st.error(str(exc))
-
-
 inject_custom_css()
 
 if "rekap_results" not in st.session_state:
@@ -2068,7 +1868,7 @@ with st.sidebar:
         """
         <div class="nav-brand">
             <div class="nav-title">TQQ Akbar UNESA</div>
-            <div class="nav-subtitle">Satu halaman untuk upload, rekap, validasi, grafik, export, dan AI.</div>
+            <div class="nav-subtitle">Satu halaman untuk upload, rekap, validasi, grafik, dan export.</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -2088,30 +1888,6 @@ with st.sidebar:
         """,
         unsafe_allow_html=True,
     )
-
-    st.divider()
-    st.subheader("🤖 Groq AI")
-    ai_enabled = st.toggle(
-        "Aktifkan Analisis AI",
-        value=False,
-        help="Jika OFF, aplikasi tetap bisa rekap dan export tanpa memakai Groq AI.",
-    )
-
-    if ai_enabled:
-        manual_groq_key = st.text_input(
-            "Groq API Key Manual",
-            value="",
-            type="password",
-            placeholder="Opsional, override .env/secrets",
-        )
-    else:
-        manual_groq_key = ""
-
-    detected_keys = get_groq_api_keys(manual_groq_key)
-    if ai_enabled:
-        st.success(f"{len(detected_keys)} API key terdeteksi.")
-    else:
-        st.caption("AI nonaktif. Rekap dan export tetap berjalan normal.")
 
     if st.session_state.get("uploaded_file_names"):
         st.divider()
@@ -2141,7 +1917,7 @@ render_upload_page()
 results = st.session_state.get("rekap_results")
 if results is None:
     st.markdown('<div class="section-title">📌 Menunggu Data Diproses</div>', unsafe_allow_html=True)
-    st.info("Setelah File Peserta dan File Nilai diproses, dashboard, grafik, tabel rekap, validasi, export, dan analisis AI akan muncul otomatis di bawah halaman ini.")
+    st.info("Setelah File Peserta dan File Nilai diproses, dashboard, grafik, tabel rekap, validasi, dan export akan muncul otomatis di bawah halaman ini.")
 else:
     st.divider()
     st.markdown('<div class="section-title">📊 Dashboard Ringkasan</div>', unsafe_allow_html=True)
@@ -2157,6 +1933,3 @@ else:
         render_validasi_page(results)
 
     render_export_page(results)
-
-    with st.expander("🤖 Analisis AI Groq Opsional", expanded=False):
-        render_ai_page(results, ai_enabled, detected_keys)
