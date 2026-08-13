@@ -6,38 +6,16 @@ import pandas as pd
 
 from backend.app.core.config import (
     FINAL_COLUMN_LABELS,
-    NILAI_COLUMN_ALIASES,
-    PESERTA_COLUMN_ALIASES,
     PROBLEM_TYPE_ORDER,
 )
 from backend.app.services.validation import build_problem_table, get_score_range_notes
 from backend.app.utils.helpers import (
+    detect_column_mapping,
     is_blank,
     name_similarity,
     natural_sort_kelas_key,
-    normalize_header,
     normalize_nim,
 )
-
-
-def detect_column_mapping(df: pd.DataFrame, aliases: Dict[str, List[str]]) -> Tuple[Dict[str, str], List[str]]:
-    normalized_columns = {normalize_header(col): col for col in df.columns}
-    mapping: Dict[str, str] = {}
-    missing: List[str] = []
-
-    for canonical, possible_names in aliases.items():
-        found = None
-        for alias in possible_names:
-            normalized_alias = normalize_header(alias)
-            if normalized_alias in normalized_columns:
-                found = normalized_columns[normalized_alias]
-                break
-        if found:
-            mapping[canonical] = found
-        else:
-            missing.append(canonical)
-
-    return mapping, missing
 
 
 def canonical_to_required_label(canonical_name: str, file_type: str) -> str:

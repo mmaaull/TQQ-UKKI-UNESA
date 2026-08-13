@@ -2,7 +2,7 @@
 
 import re
 from difflib import SequenceMatcher
-from typing import Any, Tuple
+from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 
@@ -12,6 +12,30 @@ def normalize_header(value: Any) -> str:
     text = text.replace("_", " ")
     text = re.sub(r"\s+", " ", text)
     return text
+
+
+def detect_column_mapping(
+    df: pd.DataFrame,
+    aliases: Dict[str, List[str]],
+) -> Tuple[Dict[str, str], List[str]]:
+    """Mendeteksi kolom input berdasarkan alias tanpa mengubah DataFrame."""
+    normalized_columns = {normalize_header(col): col for col in df.columns}
+    mapping: Dict[str, str] = {}
+    missing: List[str] = []
+
+    for canonical, possible_names in aliases.items():
+        found = None
+        for alias in possible_names:
+            normalized_alias = normalize_header(alias)
+            if normalized_alias in normalized_columns:
+                found = normalized_columns[normalized_alias]
+                break
+        if found:
+            mapping[canonical] = found
+        else:
+            missing.append(canonical)
+
+    return mapping, missing
 
 
 def normalize_text(value: Any) -> str:

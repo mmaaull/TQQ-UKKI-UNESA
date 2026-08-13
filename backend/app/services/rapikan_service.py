@@ -1,5 +1,6 @@
 """Logic mode Rapikan Hasil Rekap tanpa ketergantungan Streamlit."""
 
+import re
 from io import BytesIO
 from typing import Any, Dict, List, Tuple
 
@@ -10,8 +11,13 @@ from backend.app.core.config import (
     REKAP_INTERNAL_COLUMNS,
     REKAP_REQUIRED_COLUMN_LABELS,
 )
-from backend.app.services.processing import detect_column_mapping
-from backend.app.utils.helpers import is_blank, natural_sort_kelas_key, normalize_nim, normalize_text
+from backend.app.utils.helpers import (
+    detect_column_mapping,
+    is_blank,
+    natural_sort_kelas_key,
+    normalize_nim,
+    normalize_text,
+)
 
 
 class RekapRequiredColumnError(ValueError):
@@ -82,8 +88,6 @@ def drop_rekap_internal_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 def clean_sheet_name(name: str, existing_names: set[str]) -> str:
     """Membersihkan nama sheet Excel, memotong ke 31 karakter, dan menjaga tetap unik."""
-    import re
-
     cleaned = re.sub(r"[\:\?\/\\\\\*\[\]]", " ", str(name))
     cleaned = re.sub(r"\s+", " ", cleaned).strip() or "Sheet"
     base_name = cleaned[:31].strip() or "Sheet"
