@@ -1,6 +1,5 @@
 """Entry point FastAPI dasar untuk backend TQQ."""
 
-import json
 from io import BytesIO
 from pathlib import Path
 from typing import Callable
@@ -24,8 +23,17 @@ from backend.app.services.excel_service import (
     export_per_kelas_zip,
 )
 from backend.app.services.session_store import (
+    create_rapikan_session,
     create_rekap_session,
+    get_rapikan_session,
     get_rekap_session,
+)
+from backend.app.services.rapikan_service import (
+    RekapRequiredColumnError,
+    build_rekap_kelas_prodi_preview,
+    drop_rekap_internal_columns,
+    export_rekap_by_kelas_prodi,
+    read_rekap_file,
 )
 
 
@@ -37,6 +45,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 
@@ -48,7 +57,11 @@ def health_check() -> dict[str, str]:
 
 def dataframe_records(df: pd.DataFrame) -> list[dict]:
     """Mengubah DataFrame hasil service menjadi data JSON untuk response API."""
-    return json.loads(df.to_json(orient="records"))
+    # ``DataFrame.to_json`` membatasi presisi float secara default. Gunakan
+    # record Python agar nilai hasil validasi (mis. kemiripan nama) tidak
+    # berubah ketika diserialisasi ke response API.
+    normalized = df.astype(object).where(pd.notna(df), None)
+    return normalized.to_dict(orient="records")
 
 
 def build_summary(results: dict[str, pd.DataFrame]) -> dict[str, int | float]:
@@ -106,6 +119,33 @@ async def read_excel_upload(upload: UploadFile, field_name: str) -> pd.DataFrame
         ) from exc
 
 
+async def read_rapikan_upload(upload: UploadFile) -> pd.DataFrame:
+    """Baca file hasil rekap melalui service legacy mode rapikan."""
+    filename = upload.filename or ""
+    if Path(filename).suffix.lower() not in {".xlsx", ".xls"}:
+        raise HTTPException(
+            status_code=415,
+            detail="rekap_file harus berformat .xlsx atau .xls.",
+        )
+    contents = await upload.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="rekap_file kosong.")
+    uploaded_file = BytesIO(contents)
+    uploaded_file.name = filename
+    try:
+        dataframe = read_rekap_file(uploaded_file)
+    except RekapRequiredColumnError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"rekap_file tidak dapat dibaca sebagai file Excel: {exc}",
+        ) from exc
+    if dataframe.empty:
+        raise HTTPException(status_code=422, detail="Data rekap kosong atau tidak ditemukan.")
+    return dataframe
+
+
 @app.post("/api/rekap/process")
 async def process_rekap_upload(
     peserta_file: UploadFile = File(...),
@@ -152,6 +192,44 @@ def get_rekap_result(session_id: str) -> dict:
     if session is None:
         raise HTTPException(status_code=404, detail="Session rekap tidak ditemukan.")
     return rekap_response(session_id, session.summary, session.results)
+
+
+@app.post("/api/rapikan/process")
+async def process_rapikan_upload(rekap_file: UploadFile = File(...)) -> dict:
+    """Jalankan mode rapikan legacy dan simpan hasilnya sementara."""
+    combined_rekap = await read_rapikan_upload(rekap_file)
+    try:
+        sheet_preview = build_rekap_kelas_prodi_preview(combined_rekap)
+        excel_bytes = export_rekap_by_kelas_prodi(combined_rekap)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Proses rapikan gagal.") from exc
+
+    preview = drop_rekap_internal_columns(combined_rekap).head(100)
+    session_id = create_rapikan_session(preview, sheet_preview, excel_bytes)
+    return {
+        "session_id": session_id,
+        "summary": {
+            "total_data": int(len(combined_rekap)),
+            "total_sheet": int(len(sheet_preview)),
+        },
+        "preview": dataframe_records(preview),
+        "sheet_preview": dataframe_records(sheet_preview),
+    }
+
+
+@app.get("/api/rapikan/{session_id}/download")
+def download_rapikan_result(session_id: str) -> Response:
+    """Download Excel hasil mode rapikan dari sesi development."""
+    session = get_rapikan_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session rapikan tidak ditemukan.")
+    return Response(
+        content=session.excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": 'attachment; filename="rekap_tqq_per_kode_kelas_dan_prodi.xlsx"'
+        },
+    )
 
 
 EXCEL_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

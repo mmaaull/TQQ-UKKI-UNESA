@@ -2,9 +2,11 @@ import type {
   ApiRecord,
   ChartDatum,
   ClassProgressDatum,
+  ExportKind,
   KpiItem,
   RekapProcessResponse,
   RekapRow,
+  RapikanProcessResponse,
   Summary,
 } from "@/types/dashboard";
 
@@ -70,12 +72,83 @@ export async function processRekap(pesertaFile: File, nilaiFile: File): Promise<
   return response.json() as Promise<RekapProcessResponse>;
 }
 
+function filenameFromDisposition(contentDisposition: string | null, fallback: string): string {
+  const match = contentDisposition?.match(/filename="?([^";]+)"?/i);
+  return match?.[1] ?? fallback;
+}
+
+async function triggerBrowserDownload(response: Response, fallbackFilename: string): Promise<string> {
+  const filename = filenameFromDisposition(response.headers.get("content-disposition"), fallbackFilename);
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+  return filename;
+}
+
+export async function downloadExport(kind: ExportKind, sessionId?: string): Promise<string> {
+  const requiresSession = kind !== "template";
+  if (requiresSession && !sessionId) {
+    throw new ApiError("Proses rekap harus berhasil sebelum file ini dapat diunduh.", 400);
+  }
+
+  const endpoint = kind === "template" ? "/api/export/template" : `/api/export/${sessionId}/${kind}`;
+  const response = await fetch(`${apiUrl}${endpoint}`);
+  if (!response.ok) {
+    let message = "Unduhan export gagal. Silakan coba kembali.";
+    try {
+      const body: unknown = await response.json();
+      if (typeof body === "object" && body !== null && "detail" in body) {
+        message = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
+      }
+    } catch {
+      // Gunakan pesan default ketika response error bukan JSON.
+    }
+    throw new ApiError(message, response.status);
+  }
+
+  return triggerBrowserDownload(response, `rekap-${kind}.xlsx`);
+}
+
+export async function processRapikan(rekapFile: File): Promise<RapikanProcessResponse> {
+  const formData = new FormData();
+  formData.append("rekap_file", rekapFile);
+  const response = await fetch(`${apiUrl}/api/rapikan/process`, { method: "POST", body: formData });
+  if (!response.ok) {
+    let message = "Proses rapikan gagal. Silakan coba kembali.";
+    try {
+      const body: unknown = await response.json();
+      if (typeof body === "object" && body !== null && "detail" in body) {
+        message = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
+      }
+    } catch {
+      // Gunakan pesan default jika response error bukan JSON.
+    }
+    throw new ApiError(message, response.status);
+  }
+  return response.json() as Promise<RapikanProcessResponse>;
+}
+
+export async function downloadRapikan(sessionId: string): Promise<string> {
+  const response = await fetch(`${apiUrl}/api/rapikan/${sessionId}/download`);
+  if (!response.ok) {
+    throw new ApiError("Unduhan hasil rapikan gagal. Silakan proses ulang file.", response.status);
+  }
+  return triggerBrowserDownload(response, "rekap_tqq_per_kode_kelas_dan_prodi.xlsx");
+}
+
 export function makeKpiItems(summary: Summary): KpiItem[] {
   return [
     { label: "Total Peserta", value: formatNumber(summary.total_peserta), note: "100% dari total data", tone: "blue" },
     { label: "Sudah Ada Nilai", value: formatNumber(summary.sudah_ada_nilai), note: `${formatPercentage(summary.persentase_selesai)} dari total peserta`, tone: "green" },
     { label: "Belum Ada Nilai", value: formatNumber(summary.belum_ada_nilai), note: `${formatPercentage(summary.total_peserta ? summary.belum_ada_nilai / summary.total_peserta * 100 : 0)} dari total peserta`, tone: "amber" },
     { label: "Perlu Dicek", value: formatNumber(summary.perlu_dicek), note: `${formatPercentage(summary.total_peserta ? summary.perlu_dicek / summary.total_peserta * 100 : 0)} dari total peserta`, tone: "red" },
+    { label: "Persentase Selesai", value: formatPercentage(summary.persentase_selesai), note: "Kelengkapan nilai peserta", tone: "blue" },
   ];
 }
 

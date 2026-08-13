@@ -4,10 +4,12 @@ import { FileSpreadsheet, ShieldCheck, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ClassChart } from "@/components/ClassChart";
+import { ExportSection } from "@/components/ExportSection";
 import { Navbar } from "@/components/Navbar";
 import { ProblemTable } from "@/components/ProblemTable";
 import { ProcessCard } from "@/components/ProcessCard";
 import { ProgressChart } from "@/components/ProgressChart";
+import { RapikanSection } from "@/components/RapikanSection";
 import { RekapTable } from "@/components/RekapTable";
 import { StatCard } from "@/components/StatCard";
 import { UploadCard } from "@/components/UploadCard";
@@ -21,7 +23,7 @@ import {
   mapValidationItems,
   processRekap,
 } from "@/lib/api";
-import { workflowSteps } from "@/lib/mock-data";
+import { workflowSteps } from "@/lib/workflow";
 import type { ProcessStatus, RekapProcessResponse, Summary } from "@/types/dashboard";
 
 const emptySummary: Summary = {
@@ -56,6 +58,7 @@ export default function Home() {
   const classProgress = useMemo(() => mapClassProgress(result?.ringkasan_kelas ?? []), [result]);
   const validationItems = useMemo(() => mapValidationItems(result?.ringkasan_masalah ?? []), [result]);
   const isProcessing = status === "processing";
+  const hasDashboard = status === "success" && result !== null;
 
   function resetResultState() {
     setError("");
@@ -129,15 +132,21 @@ export default function Home() {
 
         {sessionId && <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Rekap berhasil disimpan dalam sesi: <span className="font-mono font-semibold">{sessionId}</span></p>}
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{kpiItems.map((item) => <StatCard item={item} key={item.label} />)}</section>
+        {hasDashboard ? <>
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">{kpiItems.map((item) => <StatCard item={item} key={item.label} />)}</section>
 
-        <section className="grid gap-4 lg:grid-cols-3">
-          <ProgressChart completion={`${summary.persentase_selesai.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`} data={scoreProgress} lastProcessed={processedAt || "Belum diproses"} needsReview={{ value: summary.perlu_dicek, percentage: (summary.total_peserta ? summary.perlu_dicek / summary.total_peserta * 100 : 0).toLocaleString("id-ID", { maximumFractionDigits: 1 }) }} />
-          <ClassChart data={classProgress} />
-          <ValidationChart data={validationItems} total={summary.perlu_dicek} />
-        </section>
+          <section className="grid gap-4 lg:grid-cols-3">
+            <ProgressChart completion={`${summary.persentase_selesai.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`} data={scoreProgress} lastProcessed={processedAt} needsReview={{ value: summary.perlu_dicek, percentage: (summary.total_peserta ? summary.perlu_dicek / summary.total_peserta * 100 : 0).toLocaleString("id-ID", { maximumFractionDigits: 1 }) }} />
+            <ClassChart data={classProgress} />
+            <ValidationChart data={validationItems} total={summary.perlu_dicek} />
+          </section>
 
-        {result ? <><RekapTable rows={rekapRows} subtitle={`Menampilkan ${rekapRows.length} data hasil rekap`} /><ProblemTable rows={result.data_bermasalah} /></> : <section className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-8 text-center text-sm text-slate-500">Pilih kedua file Excel lalu proses rekap untuk menampilkan hasil, ringkasan kelas, dan data bermasalah.</section>}
+          <RekapTable rows={rekapRows} subtitle={`Menampilkan ${rekapRows.length} data hasil rekap`} />
+          <ProblemTable rows={result.data_bermasalah} />
+        </> : <section className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-8 text-center text-sm text-slate-500">Dashboard hasil akan tampil setelah proses rekap berhasil dilakukan.</section>}
+
+        <ExportSection sessionId={sessionId} />
+        <RapikanSection />
       </main>
       <footer className="mt-6 border-t border-slate-200 bg-white py-6 text-xs text-slate-500"><div className="mx-auto flex max-w-[1440px] flex-col justify-between gap-3 px-5 sm:flex-row sm:px-8 lg:px-10"><p>© 2026 UKKI UNESA — Sistem Manajemen Akademik</p><div className="flex gap-6"><button type="button">Kebijakan Privasi</button><button type="button">Bantuan</button></div></div></footer>
     </div>

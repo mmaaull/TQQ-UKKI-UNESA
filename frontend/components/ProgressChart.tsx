@@ -13,13 +13,14 @@ export type ProgressChartProps = {
 };
 
 export function ProgressChart({ data, completion, needsReview, lastProcessed }: ProgressChartProps) {
+  const hasData = data.some((item) => item.value > 0);
   return (
     <article className="flex min-h-[370px] flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div><h2 className="text-base font-semibold text-slate-900">Progress Rekap</h2><p className="mt-1 text-xs leading-5 text-slate-500">Persentase kelengkapan nilai keseluruhan</p></div>
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 py-5 sm:flex-row">
+      {!hasData ? <div className="flex flex-1 items-center justify-center py-8 text-center text-sm text-slate-500">Belum ada data nilai untuk ditampilkan.</div> : <div className="flex flex-1 flex-col items-center justify-center gap-6 py-5 sm:flex-row">
         <div className="relative size-40"><ResponsiveContainer height="100%" width="100%"><PieChart><Pie data={data} dataKey="value" innerRadius={52} outerRadius={70} paddingAngle={2} startAngle={90} endAngle={-270}>{data.map((entry) => <Cell fill={entry.color} key={entry.name} />)}</Pie></PieChart></ResponsiveContainer><div className="pointer-events-none absolute inset-0 grid place-items-center text-center"><div><p className="text-3xl font-bold tracking-tight text-slate-900">{completion}</p><p className="mt-1 text-[11px] font-semibold text-slate-500">Selesai</p></div></div></div>
         <div className="space-y-3">{data.map((item) => <div className="flex items-start gap-2.5" key={item.name}><span className="mt-1 size-3 rounded-full" style={{ backgroundColor: item.color }} /><div><p className="text-xs font-semibold text-slate-700">{item.name}</p><p className="mt-0.5 text-[11px] text-slate-500">{item.value.toLocaleString("id-ID")}{item.percentage ? ` (${item.percentage}%)` : ""}</p></div></div>)}{needsReview && <div className="flex items-start gap-2.5"><span className="mt-1 size-3 rounded-full bg-red-500" /><div><p className="text-xs font-semibold text-slate-700">Perlu Dicek</p><p className="mt-0.5 text-[11px] text-slate-500">{needsReview.value} ({needsReview.percentage}%)</p></div></div>}</div>
-      </div>
+      </div>}
       <p className="flex items-center gap-1.5 border-t border-slate-100 pt-3 text-[11px] font-medium text-slate-500"><Clock3 size={14} /> Terakhir diproses: {lastProcessed}</p>
     </article>
   );

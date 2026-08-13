@@ -40,6 +40,9 @@ export type RekapRow = {
 
 export type ProcessStatus = "idle" | "ready" | "processing" | "success" | "error";
 
+export type ExportStatus = "idle" | "downloading" | "success" | "error";
+export type ExportKind = "final" | "validasi" | "data-bermasalah" | "per-kelas" | "template";
+
 export type Summary = {
   total_peserta: number;
   sudah_ada_nilai: number;
@@ -57,4 +60,11 @@ export type RekapProcessResponse = {
   ringkasan_kelas: ApiRecord[];
   ringkasan_masalah: ApiRecord[];
   data_bermasalah: ApiRecord[];
+};
+
+export type RapikanProcessResponse = {
+  session_id: string;
+  summary: { total_data: number; total_sheet: number };
+  preview: ApiRecord[];
+  sheet_preview: ApiRecord[];
 };
