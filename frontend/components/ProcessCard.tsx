@@ -1,0 +1,5 @@
+import { LockKeyhole, Play } from "lucide-react";
+
+export function ProcessCard({ disabled = true, label = "Proses Rekap & Validasi" }: { disabled?: boolean; label?: string }) {
+  return <article className="flex min-h-[310px] flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div><h2 className="text-base font-semibold text-slate-900">Mulai Proses</h2><p className="mt-1 text-xs leading-5 text-slate-500">Upload kedua file untuk melanjutkan proses rekap</p></div><div className="flex flex-1 flex-col items-center justify-center"><button className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold ${disabled ? "cursor-not-allowed bg-slate-200 text-slate-400" : "bg-blue-700 text-white hover:bg-blue-800"}`} disabled={disabled} type="button"><Play size={19} fill="currentColor" /> {label}</button><p className="mt-4 flex items-start gap-2 text-center text-xs leading-5 text-slate-500"><LockKeyhole size={15} className="mt-0.5 shrink-0" />Tombol akan aktif setelah kedua file berhasil diupload</p></div></article>;
+}

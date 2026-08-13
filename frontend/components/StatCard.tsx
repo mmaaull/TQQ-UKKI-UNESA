@@ -1,0 +1,5 @@
+import { CheckCircle2, Clock3, TriangleAlert, UsersRound } from "lucide-react";
+import type { KpiItem } from "@/types/dashboard";
+
+const appearances = { blue: { icon: UsersRound, background: "bg-blue-100", text: "text-blue-700" }, green: { icon: CheckCircle2, background: "bg-emerald-100", text: "text-emerald-700" }, amber: { icon: Clock3, background: "bg-amber-100", text: "text-amber-700" }, red: { icon: TriangleAlert, background: "bg-red-100", text: "text-red-700" } };
+export function StatCard({ item }: { item: KpiItem }) { const appearance = appearances[item.tone]; const Icon = appearance.icon; return <article className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className={`grid size-14 shrink-0 place-items-center rounded-full ${appearance.background} ${appearance.text}`}><Icon size={27} strokeWidth={2} /></div><div><p className="text-xs font-semibold text-slate-500">{item.label}</p><p className="mt-1 text-3xl font-bold tracking-tight text-slate-900">{item.value}</p><p className="mt-1 text-[11px] font-medium text-slate-500">{item.note}</p></div></article>; }
