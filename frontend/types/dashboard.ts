@@ -38,7 +38,7 @@ export type RekapRow = {
   validasi: "Valid" | "Perlu Dicek";
 };
 
-export type ProcessStatus = "idle" | "uploading" | "processing" | "success" | "error";
+export type ProcessStatus = "idle" | "ready" | "processing" | "success" | "error";
 
 export type Summary = {
   total_peserta: number;

@@ -47,6 +47,7 @@ export default function Home() {
   const [result, setResult] = useState<RekapProcessResponse | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [processedAt, setProcessedAt] = useState("");
+  const [uploadResetKey, setUploadResetKey] = useState(0);
 
   const summary = result?.summary ?? emptySummary;
   const kpiItems = useMemo(() => makeKpiItems(summary), [summary]);
@@ -54,15 +55,42 @@ export default function Home() {
   const rekapRows = useMemo(() => mapRekapRows(result?.rekap ?? []), [result]);
   const classProgress = useMemo(() => mapClassProgress(result?.ringkasan_kelas ?? []), [result]);
   const validationItems = useMemo(() => mapValidationItems(result?.ringkasan_masalah ?? []), [result]);
-  const isBusy = status === "uploading" || status === "processing";
-  const canProcess = Boolean(pesertaFile && nilaiFile) && !isBusy;
+  const isProcessing = status === "processing";
+
+  function resetResultState() {
+    setError("");
+    setResult(null);
+    setSessionId(null);
+    setProcessedAt("");
+  }
+
+  function setSelectedFile(kind: "peserta" | "nilai", file: File | null) {
+    const nextPesertaFile = kind === "peserta" ? file : pesertaFile;
+    const nextNilaiFile = kind === "nilai" ? file : nilaiFile;
+    setPesertaFile(nextPesertaFile);
+    setNilaiFile(nextNilaiFile);
+    resetResultState();
+    setStatus(nextPesertaFile && nextNilaiFile ? "ready" : "idle");
+  }
+
+  function handleReset() {
+    setPesertaFile(null);
+    setNilaiFile(null);
+    setUploadResetKey((value) => value + 1);
+    resetResultState();
+    setStatus("idle");
+  }
+
+  function handleRetry() {
+    setError("");
+    setStatus(pesertaFile && nilaiFile ? "ready" : "idle");
+  }
 
   async function handleProcess() {
-    if (!pesertaFile || !nilaiFile || isBusy) return;
+    if (!pesertaFile || !nilaiFile || status !== "ready") return;
 
     setError("");
-    setStatus("uploading");
-    const processingTimer = window.setTimeout(() => setStatus("processing"), 600);
+    setStatus("processing");
 
     try {
       const response = await processRekap(pesertaFile, nilaiFile);
@@ -73,8 +101,6 @@ export default function Home() {
     } catch (caughtError) {
       setStatus("error");
       setError(caughtError instanceof Error ? caughtError.message : "Terjadi kesalahan saat memproses rekap.");
-    } finally {
-      window.clearTimeout(processingTimer);
     }
   }
 
@@ -96,9 +122,9 @@ export default function Home() {
         <WorkflowStepper steps={workflowSteps} />
 
         <section className="grid gap-4 lg:grid-cols-3">
-          <UploadCard disabled={isBusy} kind="peserta" title="File Peserta" description="Upload file data peserta sesuai format" onFileChange={setPesertaFile} />
-          <UploadCard disabled={isBusy} kind="nilai" title="File Nilai" description="Upload file nilai peserta sesuai format" onFileChange={setNilaiFile} />
-          <ProcessCard disabled={!canProcess} error={error} onProcess={handleProcess} status={status} />
+          <UploadCard disabled={isProcessing} key={`peserta-${uploadResetKey}`} kind="peserta" title="File Peserta" description="Upload file data peserta sesuai format" onFileChange={(file) => setSelectedFile("peserta", file)} />
+          <UploadCard disabled={isProcessing} key={`nilai-${uploadResetKey}`} kind="nilai" title="File Nilai" description="Upload file nilai peserta sesuai format" onFileChange={(file) => setSelectedFile("nilai", file)} />
+          <ProcessCard error={error} onProcess={handleProcess} onReset={handleReset} onRetry={handleRetry} status={status} />
         </section>
 
         {sessionId && <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Rekap berhasil disimpan dalam sesi: <span className="font-mono font-semibold">{sessionId}</span></p>}
