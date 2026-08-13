@@ -37,3 +37,24 @@ export type RekapRow = {
   status: "Sudah Ada Nilai" | "Belum Ada Nilai";
   validasi: "Valid" | "Perlu Dicek";
 };
+
+export type ProcessStatus = "idle" | "uploading" | "processing" | "success" | "error";
+
+export type Summary = {
+  total_peserta: number;
+  sudah_ada_nilai: number;
+  belum_ada_nilai: number;
+  perlu_dicek: number;
+  persentase_selesai: number;
+};
+
+export type ApiRecord = Record<string, string | number | boolean | null>;
+
+export type RekapProcessResponse = {
+  session_id: string;
+  summary: Summary;
+  rekap: ApiRecord[];
+  ringkasan_kelas: ApiRecord[];
+  ringkasan_masalah: ApiRecord[];
+  data_bermasalah: ApiRecord[];
+};

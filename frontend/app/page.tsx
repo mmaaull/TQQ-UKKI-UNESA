@@ -1,7 +1,11 @@
+"use client";
+
 import { FileSpreadsheet, ShieldCheck, Sparkles } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { ClassChart } from "@/components/ClassChart";
 import { Navbar } from "@/components/Navbar";
+import { ProblemTable } from "@/components/ProblemTable";
 import { ProcessCard } from "@/components/ProcessCard";
 import { ProgressChart } from "@/components/ProgressChart";
 import { RekapTable } from "@/components/RekapTable";
@@ -9,18 +13,78 @@ import { StatCard } from "@/components/StatCard";
 import { UploadCard } from "@/components/UploadCard";
 import { ValidationChart } from "@/components/ValidationChart";
 import { WorkflowStepper } from "@/components/WorkflowStepper";
-import { incompleteClasses, kpiItems, rekapRows, scoreProgress, validationItems, workflowSteps } from "@/lib/mock-data";
+import {
+  makeKpiItems,
+  makeScoreProgress,
+  mapClassProgress,
+  mapRekapRows,
+  mapValidationItems,
+  processRekap,
+} from "@/lib/api";
+import { workflowSteps } from "@/lib/mock-data";
+import type { ProcessStatus, RekapProcessResponse, Summary } from "@/types/dashboard";
+
+const emptySummary: Summary = {
+  total_peserta: 0,
+  sudah_ada_nilai: 0,
+  belum_ada_nilai: 0,
+  perlu_dicek: 0,
+  persentase_selesai: 0,
+};
+
+function formatProcessedAt(): string {
+  return new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "long",
+    timeStyle: "short",
+  }).format(new Date());
+}
 
 export default function Home() {
+  const [pesertaFile, setPesertaFile] = useState<File | null>(null);
+  const [nilaiFile, setNilaiFile] = useState<File | null>(null);
+  const [status, setStatus] = useState<ProcessStatus>("idle");
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<RekapProcessResponse | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [processedAt, setProcessedAt] = useState("");
+
+  const summary = result?.summary ?? emptySummary;
+  const kpiItems = useMemo(() => makeKpiItems(summary), [summary]);
+  const scoreProgress = useMemo(() => makeScoreProgress(summary), [summary]);
+  const rekapRows = useMemo(() => mapRekapRows(result?.rekap ?? []), [result]);
+  const classProgress = useMemo(() => mapClassProgress(result?.ringkasan_kelas ?? []), [result]);
+  const validationItems = useMemo(() => mapValidationItems(result?.ringkasan_masalah ?? []), [result]);
+  const isBusy = status === "uploading" || status === "processing";
+  const canProcess = Boolean(pesertaFile && nilaiFile) && !isBusy;
+
+  async function handleProcess() {
+    if (!pesertaFile || !nilaiFile || isBusy) return;
+
+    setError("");
+    setStatus("uploading");
+    const processingTimer = window.setTimeout(() => setStatus("processing"), 600);
+
+    try {
+      const response = await processRekap(pesertaFile, nilaiFile);
+      setResult(response);
+      setSessionId(response.session_id);
+      setProcessedAt(formatProcessedAt());
+      setStatus("success");
+    } catch (caughtError) {
+      setStatus("error");
+      setError(caughtError instanceof Error ? caughtError.message : "Terjadi kesalahan saat memproses rekap.");
+    } finally {
+      window.clearTimeout(processingTimer);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900">
       <Navbar />
       <main className="mx-auto max-w-[1440px] space-y-5 px-5 py-6 sm:px-8 lg:px-10 lg:py-8">
         <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-6 py-7 shadow-sm sm:px-8 sm:py-8">
           <div className="relative z-10 max-w-3xl">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold text-blue-700">
-              <Sparkles size={13} /> Sistem manajemen rekap nilai
-            </div>
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold text-blue-700"><Sparkles size={13} /> Sistem manajemen rekap nilai</div>
             <h1 className="text-3xl font-bold tracking-[-0.03em] text-slate-900 sm:text-4xl">Rekap Nilai TQQ Akbar UNESA</h1>
             <p className="mt-3 max-w-2xl text-base leading-7 text-slate-500">Kelola, validasi, dan rekap nilai peserta dengan mudah dan akurat.</p>
           </div>
@@ -32,26 +96,24 @@ export default function Home() {
         <WorkflowStepper steps={workflowSteps} />
 
         <section className="grid gap-4 lg:grid-cols-3">
-          <UploadCard kind="peserta" title="File Peserta" description="Upload file data peserta sesuai format" />
-          <UploadCard kind="nilai" title="File Nilai" description="Upload file nilai peserta sesuai format" />
-          <ProcessCard />
+          <UploadCard disabled={isBusy} kind="peserta" title="File Peserta" description="Upload file data peserta sesuai format" onFileChange={setPesertaFile} />
+          <UploadCard disabled={isBusy} kind="nilai" title="File Nilai" description="Upload file nilai peserta sesuai format" onFileChange={setNilaiFile} />
+          <ProcessCard disabled={!canProcess} error={error} onProcess={handleProcess} status={status} />
         </section>
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {kpiItems.map((item) => <StatCard item={item} key={item.label} />)}
-        </section>
+        {sessionId && <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Rekap berhasil disimpan dalam sesi: <span className="font-mono font-semibold">{sessionId}</span></p>}
+
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{kpiItems.map((item) => <StatCard item={item} key={item.label} />)}</section>
 
         <section className="grid gap-4 lg:grid-cols-3">
-          <ProgressChart completion="91,3%" data={scoreProgress} lastProcessed="12 Agustus 2026 • 15:42 WIB" needsReview={{ value: 23, percentage: "1,8" }} />
-          <ClassChart data={incompleteClasses} />
-          <ValidationChart data={validationItems} total={23} />
+          <ProgressChart completion={`${summary.persentase_selesai.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`} data={scoreProgress} lastProcessed={processedAt || "Belum diproses"} needsReview={{ value: summary.perlu_dicek, percentage: (summary.total_peserta ? summary.perlu_dicek / summary.total_peserta * 100 : 0).toLocaleString("id-ID", { maximumFractionDigits: 1 }) }} />
+          <ClassChart data={classProgress} />
+          <ValidationChart data={validationItems} total={summary.perlu_dicek} />
         </section>
 
-        <RekapTable rows={rekapRows} />
+        {result ? <><RekapTable rows={rekapRows} subtitle={`Menampilkan ${rekapRows.length} data hasil rekap`} /><ProblemTable rows={result.data_bermasalah} /></> : <section className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-8 text-center text-sm text-slate-500">Pilih kedua file Excel lalu proses rekap untuk menampilkan hasil, ringkasan kelas, dan data bermasalah.</section>}
       </main>
-      <footer className="mt-6 border-t border-slate-200 bg-white py-6 text-xs text-slate-500">
-        <div className="mx-auto flex max-w-[1440px] flex-col justify-between gap-3 px-5 sm:flex-row sm:px-8 lg:px-10"><p>© 2026 UKKI UNESA — Sistem Manajemen Akademik</p><div className="flex gap-6"><button type="button">Kebijakan Privasi</button><button type="button">Bantuan</button></div></div>
-      </footer>
+      <footer className="mt-6 border-t border-slate-200 bg-white py-6 text-xs text-slate-500"><div className="mx-auto flex max-w-[1440px] flex-col justify-between gap-3 px-5 sm:flex-row sm:px-8 lg:px-10"><p>© 2026 UKKI UNESA — Sistem Manajemen Akademik</p><div className="flex gap-6"><button type="button">Kebijakan Privasi</button><button type="button">Bantuan</button></div></div></footer>
     </div>
   );
 }
