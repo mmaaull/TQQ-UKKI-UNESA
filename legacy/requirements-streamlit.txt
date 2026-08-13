@@ -1,0 +1,5 @@
+# Arsip dependency untuk menjalankan antarmuka lama saja.
+streamlit==1.41.1
+plotly==6.5.2
+pandas==2.2.3
+openpyxl==3.1.5

@@ -1,8 +1,20 @@
 """Konfigurasi dan konstanta yang digunakan oleh business logic TQQ."""
 
+import os
+
 APP_TITLE = "Rekap Nilai TQQ Akbar UNESA"
 MODE_REKAP = "Mode Rekap Peserta & Nilai"
 MODE_RAPIKAN = "Mode Rapikan Hasil Rekap"
+
+
+def _parse_cors_origins(value: str) -> list[str]:
+    """Parse origin CORS comma-separated dari environment deployment."""
+    return [origin.strip().rstrip("/") for origin in value.split(",") if origin.strip()]
+
+
+CORS_ORIGINS = _parse_cors_origins(
+    os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+)
 
 PESERTA_REQUIRED_COLUMNS = [
     "Nama", "NIM", "Prodi", "Kelas Umum", "Kode Kelas PAI", "Dosen Pengampu",

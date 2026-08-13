@@ -9,7 +9,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
-from backend.app.core.config import NILAI_COLUMN_ALIASES, PESERTA_COLUMN_ALIASES
+from backend.app.core.config import CORS_ORIGINS, NILAI_COLUMN_ALIASES, PESERTA_COLUMN_ALIASES
 from backend.app.services.processing import (
     process_rekap,
     read_uploaded_file,
@@ -41,7 +41,7 @@ app = FastAPI(title="Rekap Nilai TQQ Akbar UNESA API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,77 +1,79 @@
-# Rekap Nilai TQQ Akbar UNESA - Streamlit Web Dashboard Solid Blue
+# Rekap Nilai TQQ Akbar UNESA
 
-Aplikasi web dashboard sederhana untuk membantu panitia TQQ Akbar UNESA melakukan rekap nilai peserta berdasarkan **Kode Kelas PAI**.
+Aplikasi rekap nilai TQQ Akbar UNESA menggunakan frontend Next.js dan backend
+FastAPI. Logic rekap, validasi, export Excel, dan mode rapikan berada pada
+service backend serta dijaga oleh baseline test.
 
-## Teknologi
+## Prasyarat
 
-- Python
-- Streamlit
-- Pandas
-- OpenPyXL
-- Plotly
+- Python 3.12+
+- Node.js 20+
 
-## Fitur Utama
+## Backend FastAPI
 
-- Upload File Peserta dan File Nilai
-- Rekap berdasarkan NIM
-- Validasi data otomatis
-- Dashboard ringkasan
-- Grafik status nilai, progress per kelas, kelas prioritas, dan jenis masalah
-- Tampilan bernuansa biru solid tanpa gradient
-- Panduan penggunaan berbentuk list
-- Filter hasil rekap
-- Export 1 file Excel dengan banyak sheet per Kode Kelas PAI
+Instal dependency dan jalankan untuk development:
 
-## Kolom File Peserta
-
-- Nama
-- NIM
-- Prodi
-- Kelas Umum
-- Kode Kelas PAI
-- Dosen Pengampu
-
-## Kolom File Nilai
-
-- NAMA
-- NIM
-- PRESENSI
-- BACAAN
-- HAFALAN
-- EVALUASI
-- TOTAL NILAI
-- ABJAD
-
-## Cara Menjalankan
-
-```bash
+```powershell
 pip install -r requirements.txt
-streamlit run app.py
+uvicorn backend.app.main:app --reload
 ```
 
-## Update v12
+API tersedia di `http://localhost:8000` dan Swagger di
+`http://localhost:8000/docs`.
 
-Jenis deteksi masalah pada menu validasi kini dibatasi menjadi:
+### Environment backend
 
-1. NIM di file nilai tidak ada di file peserta
-2. Abjad kosong
-3. Total Nilai kosong
-4. Nama berbeda antara file peserta dan file nilai
-5. NIM duplikat di file nilai
+Salin `backend/.env.example` sebagai referensi konfigurasi deployment. Sistem
+deployment harus menyediakan environment variable berikut:
 
-Validasi `Dosen Pengampu kosong` sudah dihapus dari daftar masalah.
+```text
+CORS_ORIGINS=https://app.example.com
+```
 
-## Update v13
+Untuk development, default CORS mengizinkan `http://localhost:3000` dan
+`http://127.0.0.1:3000`. Pada production, gunakan origin frontend publik yang
+spesifik dan dipisahkan koma bila lebih dari satu.
 
-Tambahan fitur quality check:
+Jalankan production server, misalnya:
 
-1. **Cek rentang nilai**
-   - PRESENSI, BACAAN, HAFALAN, EVALUASI, dan TOTAL NILAI dicek dengan rentang default 0–100.
-   - Nilai yang bukan angka atau di luar rentang akan masuk ke Data Bermasalah.
+```powershell
+uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+```
 
-2. **Preview hasil per Kode Kelas PAI sebelum export**
-   - Menampilkan daftar sheet yang akan dibuat.
-   - Menampilkan jumlah peserta, sudah ada nilai, belum ada nilai, dan perlu dicek per sheet.
+> Hasil rekap dan rapikan saat ini menggunakan session sementara di memori.
+> Untuk deployment saat ini gunakan satu worker/backend instance atau sticky
+> routing. Penyimpanan persisten dapat ditambahkan pada tahap terpisah.
 
-3. **Download laporan validasi**
-   - Berisi ringkasan validasi, ringkasan masalah, preview sheet export, aturan rentang nilai, semua masalah, peserta perlu dicek, dan sheet detail per jenis masalah.
+## Frontend Next.js
+
+```powershell
+cd frontend
+Copy-Item .env.example .env.local
+npm ci
+npm run dev
+```
+
+Set `NEXT_PUBLIC_API_URL` di `frontend/.env.local` ke URL FastAPI, misalnya
+`http://localhost:8000` untuk development atau `https://api.example.com`
+untuk production. Nilai ini dibaca ketika build frontend.
+
+### Production build frontend
+
+```powershell
+cd frontend
+npm ci
+npm run build
+npm run start
+```
+
+## Verifikasi
+
+```powershell
+python tests/baseline/verify_baseline.py
+python tests/baseline/verify_fastapi_integration.py
+cd frontend
+npm run build
+```
+
+Antarmuka sebelum migrasi disimpan sebagai arsip di `legacy/` dan tidak
+digunakan oleh aplikasi utama.

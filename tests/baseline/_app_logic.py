@@ -1,34 +1,25 @@
-"""Memuat fungsi business logic dari app.py tanpa mengeksekusi UI Streamlit."""
+"""Memuat shim business logic aplikasi tanpa menjalankan antarmuka web."""
 
 from __future__ import annotations
 
+import importlib.util
 import sys
 from pathlib import Path
-from types import ModuleType
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 APP_PATH = PROJECT_ROOT / "app.py"
-UI_MARKER = "# STREAMLIT UI - WEB DASHBOARD STYLE"
 
 
 def load_app_logic() -> ModuleType:
-    """Return modul logic aplikasi yang sama persis, tanpa entry point UI.
-
-    `app.py` saat ini mengeksekusi dashboard di level modul. Baseline hanya
-    mengompilasi bagian sebelum penanda UI agar fungsi produksi seperti
-    `standardize_dataframe`, `process_rekap`, dan fungsi export dapat dipakai
-    tanpa `streamlit run` atau browser.
-    """
+    """Return modul business logic tanpa menjalankan UI atau browser."""
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
 
-    source = APP_PATH.read_text(encoding="utf-8")
-    if UI_MARKER not in source:
-        raise RuntimeError(f"Penanda UI tidak ditemukan di {APP_PATH}")
-
-    logic_source = source.split(UI_MARKER, 1)[0]
-    module = ModuleType("tqq_streamlit_business_logic")
-    module.__file__ = str(APP_PATH)
-    exec(compile(logic_source, str(APP_PATH), "exec"), module.__dict__)
+    spec = importlib.util.spec_from_file_location("tqq_business_logic", APP_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Modul logic tidak dapat dimuat dari {APP_PATH}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
     return module
