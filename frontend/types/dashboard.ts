@@ -20,6 +20,9 @@ export type ChartDatum = {
 export type ClassProgressDatum = {
   kelas: string;
   jumlah: number;
+  total?: number;
+  sudahAdaNilai?: number;
+  persentase?: number;
 };
 
 export type RekapRow = {

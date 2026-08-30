@@ -179,10 +179,21 @@ export function mapRekapRows(records: ApiRecord[]): RekapRow[] {
 }
 
 export function mapClassProgress(records: ApiRecord[]): ClassProgressDatum[] {
-  return records.map((record) => ({
-    kelas: textOf(record, ["Kode Kelas PAI", "kode_kelas_pai", "Kelas"]),
-    jumlah: numberOf(record, ["Belum Ada Nilai", "belum_ada_nilai", "Jumlah"]),
-  }));
+  return records.map((record) => {
+    const total = numberOf(record, ["Total Peserta", "total_peserta"]);
+    const sudah = numberOf(record, ["Sudah Ada Nilai", "sudah_ada_nilai"]);
+    const belum = numberOf(record, ["Belum Ada Nilai", "belum_ada_nilai"]);
+    const persentaseRaw = numberOf(record, ["Persentase Selesai (%)", "persentase_selesai"]);
+    const persentase = persentaseRaw || (total > 0 ? (sudah / total) * 100 : 0);
+
+    return {
+      kelas: textOf(record, ["Kode Kelas PAI", "kode_kelas_pai", "Kelas"]),
+      jumlah: belum,
+      total: total,
+      sudahAdaNilai: sudah,
+      persentase: Math.round(persentase * 10) / 10,
+    };
+  });
 }
 
 const problemColors = ["#ef4444", "#f97316", "#eab308", "#8b5cf6", "#3b82f6"];
