@@ -1,1 +1,0 @@
-"""Layanan business logic TQQ."""

@@ -1,1 +1,0 @@
-"""Konfigurasi business logic TQQ."""
