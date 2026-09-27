@@ -29,14 +29,14 @@ def ensure_input_fixtures() -> None:
 
     if not PESERTA_FILE.exists():
         peserta = pd.DataFrame([
-            ["Alya Putri", "240001", "Teknik Informatika", "TI-A", "1A", "Dr. Ana"],
-            ["Bagas Pratama", "240002", "Teknik Informatika", "TI-A", "1A", "Dr. Ana"],
-            ["Citra Lestari", "240003", "Sistem Informasi", "SI-B", "2B", "Dr. Bima"],
-            ["Deni Saputra", "240004", "Sistem Informasi", "SI-B", "2B", "Dr. Bima"],
-            ["Eka Wulandari", "240005", "Manajemen", "MN-A", "10A", "Dr. Citra"],
-            ["Fajar Nugroho", "240006", "Manajemen", "MN-A", "10A", "Dr. Citra"],
-            ["Fajar Nugroho Duplikat", "240006", "Manajemen", "MN-A", "10A", "Dr. Citra"],
-        ], columns=["Nama", "NIM", "Prodi", "Kelas Umum", "Kode Kelas PAI", "Dosen Pengampu"])
+            ["Alya Putri", "P", "240001", "1A", "Teknik Informatika"],
+            ["Bagas Pratama", "L", "240002", "1A", "Teknik Informatika"],
+            ["Citra Lestari", "P", "240003", "2B", "Sistem Informasi"],
+            ["Deni Saputra", "L", "240004", "2B", "Sistem Informasi"],
+            ["Eka Wulandari", "P", "240005", "10A", "Manajemen"],
+            ["Fajar Nugroho", "L", "240006", "10A", "Manajemen"],
+            ["Fajar Nugroho Duplikat", "L", "240006", "10A", "Manajemen"],
+        ], columns=["Nama", "Jenis Kelamin", "NIM", "Kelas PAI", "Program Studi"])
         peserta.to_excel(PESERTA_FILE, index=False)
 
     if not NILAI_FILE.exists():

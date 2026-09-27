@@ -23,8 +23,10 @@ from backend.app.services.excel_service import (
     export_per_kelas_zip,
 )
 from backend.app.services.session_store import (
+    create_jilid_session,
     create_rapikan_session,
     create_rekap_session,
+    get_jilid_session,
     get_rapikan_session,
     get_rekap_session,
 )
@@ -35,6 +37,15 @@ from backend.app.services.rapikan_service import (
     export_rekap_by_kelas_prodi,
     read_rekap_file,
 )
+from backend.app.services.jilid_service import (
+    MasterRequiredColumnError,
+    PenilaianRequiredColumnError,
+    build_jilid_recap,
+    export_jilid_excel,
+    read_master_file,
+    read_penilaian_tashih_file,
+)
+from backend.app.utils.helpers import read_all_sheets
 
 
 app = FastAPI(title="Rekap Nilai TQQ Akbar UNESA API")
@@ -95,8 +106,12 @@ def rekap_response(
     }
 
 
-async def read_excel_upload(upload: UploadFile, field_name: str) -> pd.DataFrame:
-    """Validasi upload API lalu gunakan pembaca file legacy yang sama."""
+async def read_excel_upload(
+    upload: UploadFile,
+    field_name: str,
+    reader: Callable[[BytesIO], pd.DataFrame] = read_uploaded_file,
+) -> pd.DataFrame:
+    """Validasi upload API lalu baca file menggunakan reader yang diberikan."""
     filename = upload.filename or ""
     if Path(filename).suffix.lower() not in {".xlsx", ".xls"}:
         raise HTTPException(
@@ -111,7 +126,7 @@ async def read_excel_upload(upload: UploadFile, field_name: str) -> pd.DataFrame
     uploaded_file = BytesIO(contents)
     uploaded_file.name = filename
     try:
-        return read_uploaded_file(uploaded_file)
+        return reader(uploaded_file)
     except Exception as exc:
         raise HTTPException(
             status_code=422,
@@ -152,7 +167,7 @@ async def process_rekap_upload(
     nilai_file: UploadFile = File(...),
 ) -> dict:
     """Menjalankan business logic rekap legacy terhadap dua file Excel."""
-    raw_peserta = await read_excel_upload(peserta_file, "peserta_file")
+    raw_peserta = await read_excel_upload(peserta_file, "peserta_file", reader=read_all_sheets)
     raw_nilai = await read_excel_upload(nilai_file, "nilai_file")
 
     peserta_df, missing_peserta = standardize_dataframe(
@@ -228,6 +243,93 @@ def download_rapikan_result(session_id: str) -> Response:
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={
             "Content-Disposition": 'attachment; filename="rekap_tqq_per_kode_kelas_dan_prodi.xlsx"'
+        },
+    )
+
+
+async def read_master_upload(upload: UploadFile) -> pd.DataFrame:
+    """Baca file master (data keseluruhan peserta) untuk mode rekap jilid."""
+    filename = upload.filename or ""
+    if Path(filename).suffix.lower() not in {".xlsx", ".xls"}:
+        raise HTTPException(status_code=415, detail="master_file harus berformat .xlsx atau .xls.")
+    contents = await upload.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="master_file kosong.")
+    uploaded_file = BytesIO(contents)
+    uploaded_file.name = filename
+    try:
+        dataframe = read_master_file(uploaded_file)
+    except MasterRequiredColumnError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"master_file tidak dapat dibaca sebagai file Excel: {exc}",
+        ) from exc
+    if dataframe.empty:
+        raise HTTPException(status_code=422, detail="Data master kosong atau tidak ditemukan.")
+    return dataframe
+
+
+async def read_penilaian_tashih_upload(upload: UploadFile) -> pd.DataFrame:
+    """Baca file penilaian tashih untuk mode rekap jilid."""
+    filename = upload.filename or ""
+    if Path(filename).suffix.lower() not in {".xlsx", ".xls"}:
+        raise HTTPException(status_code=415, detail="penilaian_file harus berformat .xlsx atau .xls.")
+    contents = await upload.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="penilaian_file kosong.")
+    uploaded_file = BytesIO(contents)
+    uploaded_file.name = filename
+    try:
+        dataframe = read_penilaian_tashih_file(uploaded_file)
+    except PenilaianRequiredColumnError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"penilaian_file tidak dapat dibaca sebagai file Excel: {exc}",
+        ) from exc
+    if dataframe.empty:
+        raise HTTPException(status_code=422, detail="Data penilaian kosong atau tidak ditemukan.")
+    return dataframe
+
+
+@app.post("/api/rekap-jilid/process")
+async def process_rekap_jilid_upload(
+    master_file: UploadFile = File(...),
+    penilaian_file: UploadFile = File(...),
+) -> dict:
+    """Rekap pembagian kelas jilid berdasarkan file master dan file penilaian tashih."""
+    master_df = await read_master_upload(master_file)
+    penilaian_df = await read_penilaian_tashih_upload(penilaian_file)
+
+    try:
+        recap = build_jilid_recap(master_df, penilaian_df)
+        excel_bytes = export_jilid_excel(recap["groups"], recap["data_bermasalah"])
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Proses rekap jilid gagal.") from exc
+
+    session_id = create_jilid_session(excel_bytes)
+    return {
+        "session_id": session_id,
+        "summary": recap["summary"],
+        "ringkasan_jilid": dataframe_records(recap["ringkasan"]),
+        "data_bermasalah": dataframe_records(recap["data_bermasalah"]),
+    }
+
+
+@app.get("/api/rekap-jilid/{session_id}/download")
+def download_rekap_jilid(session_id: str) -> Response:
+    """Download Excel hasil rekap pembagian kelas jilid dari sesi development."""
+    session = get_jilid_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session rekap jilid tidak ditemukan.")
+    return Response(
+        content=session.excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": 'attachment; filename="rekap_pembagian_kelas_jilid.xlsx"'
         },
     )
 

@@ -17,7 +17,7 @@ CORS_ORIGINS = _parse_cors_origins(
 )
 
 PESERTA_REQUIRED_COLUMNS = [
-    "Nama", "NIM", "Prodi", "Kelas Umum", "Kode Kelas PAI", "Dosen Pengampu",
+    "Nama", "Jenis Kelamin", "NIM", "Kelas PAI", "Program Studi",
 ]
 
 NILAI_REQUIRED_COLUMNS = [
@@ -26,15 +26,15 @@ NILAI_REQUIRED_COLUMNS = [
 
 PESERTA_COLUMN_ALIASES = {
     "nama": ["Nama", "NAMA", "nama"],
+    "jenis_kelamin": [
+        "Jenis Kelamin", "JENIS KELAMIN", "jenis kelamin", "Gender", "GENDER",
+        "L/P", "JK",
+    ],
     "nim": ["NIM", "Nim", "nim", "NPM", "npm", "No Induk", "Nomor Induk"],
     "prodi": ["Prodi", "PRODI", "prodi", "Program Studi", "PROGRAM STUDI", "program studi"],
-    "kelas_umum": ["Kelas Umum", "KELAS UMUM", "kelas umum", "Kelas Asal", "KELAS ASAL", "kelas asal"],
     "kode_kelas_pai": [
         "Kode Kelas PAI", "KODE KELAS PAI", "kode kelas pai", "Kelas PAI", "KELAS PAI",
         "kelas pai", "Kode PAI", "KODE PAI", "kode pai",
-    ],
-    "dosen_pengampu": [
-        "Dosen Pengampu", "DOSEN PENGAMPU", "dosen pengampu", "Dosen", "DOSEN", "dosen",
     ],
 }
 
@@ -67,14 +67,14 @@ REKAP_INTERNAL_COLUMNS = {
 }
 
 FINAL_COLUMNS = [
-    "nama", "nim", "prodi", "kelas_umum", "kode_kelas_pai", "dosen_pengampu",
+    "nama", "jenis_kelamin", "nim", "prodi", "kode_kelas_pai",
     "nama_nilai", "presensi", "bacaan", "hafalan", "evaluasi", "total_nilai", "abjad",
     "status_nilai", "status_validasi", "catatan_validasi",
 ]
 
 FINAL_COLUMN_LABELS = {
-    "nama": "Nama", "nim": "NIM", "prodi": "Prodi", "kelas_umum": "Kelas Umum",
-    "kode_kelas_pai": "Kode Kelas PAI", "dosen_pengampu": "Dosen Pengampu",
+    "nama": "Nama", "jenis_kelamin": "Jenis Kelamin", "nim": "NIM", "prodi": "Prodi",
+    "kode_kelas_pai": "Kode Kelas PAI",
     "nama_nilai": "Nama dari File Nilai", "presensi": "Presensi", "bacaan": "Bacaan",
     "hafalan": "Hafalan", "evaluasi": "Evaluasi", "total_nilai": "Total Nilai", "abjad": "Abjad",
     "status_nilai": "Status Nilai", "status_validasi": "Status Validasi",
@@ -82,13 +82,13 @@ FINAL_COLUMN_LABELS = {
 }
 
 EXPORT_PER_KELAS_COLUMNS = [
-    "nama", "nim", "prodi", "kelas_umum", "kode_kelas_pai", "dosen_pengampu",
+    "nama", "jenis_kelamin", "nim", "prodi", "kode_kelas_pai",
     "presensi", "bacaan", "hafalan", "evaluasi", "total_nilai", "abjad",
 ]
 
 EXPORT_PER_KELAS_COLUMN_LABELS = {
-    "nama": "Nama", "nim": "NIM", "prodi": "Prodi", "kelas_umum": "Kelas Umum",
-    "kode_kelas_pai": "Kode Kelas PAI", "dosen_pengampu": "Dosen Pengampu",
+    "nama": "Nama", "jenis_kelamin": "Jenis Kelamin", "nim": "NIM", "prodi": "Prodi",
+    "kode_kelas_pai": "Kode Kelas PAI",
     "presensi": "PRESENSI", "bacaan": "BACAAN", "hafalan": "HAFALAN",
     "evaluasi": "EVALUASI", "total_nilai": "TOTAL NILAI", "abjad": "ABJAD",
 }
@@ -105,4 +105,35 @@ SCORE_RANGE_CONFIG = {
     "hafalan": {"label": "HAFALAN", "min": 0, "max": 100},
     "evaluasi": {"label": "EVALUASI", "min": 0, "max": 100},
     "total_nilai": {"label": "TOTAL NILAI", "min": 0, "max": 100},
+}
+
+# --- Konfigurasi mode Rekap Pembagian Kelas Jilid ---
+
+MASTER_REQUIRED_COLUMN_LABELS = {
+    "nama": "Nama", "jenis_kelamin": "Jenis Kelamin", "nim": "NIM",
+    "kode_kelas_pai": "Kelas PAI", "prodi": "Program Studi",
+}
+
+PENILAIAN_TASHIH_COLUMN_ALIASES = {
+    "nama_nilai": ["NAMA", "Nama", "nama"],
+    "nim": ["NIM", "Nim", "nim", "NPM", "npm"],
+    "prodi_nilai": ["PRODI", "Prodi", "prodi", "Program Studi", "PROGRAM STUDI"],
+    "total_nilai": [
+        "Total", "TOTAL", "Total Nilai", "TOTAL NILAI", "total", "total nilai",
+    ],
+}
+
+PENILAIAN_TASHIH_REQUIRED_COLUMN_LABELS = {"nim": "NIM", "total_nilai": "Total Nilai"}
+
+JILID_TOTAL_RANGE = {"min": 0, "max": 100}
+
+JILID_LABELS = ["Jilid 1", "Jilid 2", "Jilid 3", "Jilid 4"]
+
+JILID_GENDER_SHEET_LABELS = [("L", "Laki-laki"), ("P", "Perempuan")]
+
+JILID_OUTPUT_COLUMNS = ["nama", "jenis_kelamin", "nim", "kode_kelas_pai", "prodi"]
+
+JILID_OUTPUT_COLUMN_LABELS = {
+    "nama": "Nama", "jenis_kelamin": "Jenis Kelamin", "nim": "NIM",
+    "kode_kelas_pai": "Kelas PAI", "prodi": "Program Studi",
 }

@@ -27,8 +27,16 @@ class RapikanSession:
     excel_bytes: bytes
 
 
+@dataclass
+class JilidSession:
+    """Hasil mode rekap pembagian kelas jilid sementara untuk unduhan."""
+
+    excel_bytes: bytes
+
+
 _sessions: Dict[str, RekapSession] = {}
 _rapikan_sessions: Dict[str, RapikanSession] = {}
+_jilid_sessions: Dict[str, JilidSession] = {}
 _sessions_lock = RLock()
 
 
@@ -69,3 +77,17 @@ def get_rapikan_session(session_id: str) -> Optional[RapikanSession]:
     """Ambil sesi rapikan dari memori, atau None bila tidak ditemukan."""
     with _sessions_lock:
         return _rapikan_sessions.get(session_id)
+
+
+def create_jilid_session(excel_bytes: bytes) -> str:
+    """Simpan hasil rekap jilid di memori dan return UUID sesi baru."""
+    session_id = str(uuid4())
+    with _sessions_lock:
+        _jilid_sessions[session_id] = JilidSession(excel_bytes=excel_bytes)
+    return session_id
+
+
+def get_jilid_session(session_id: str) -> Optional[JilidSession]:
+    """Ambil sesi rekap jilid dari memori, atau None bila tidak ditemukan."""
+    with _sessions_lock:
+        return _jilid_sessions.get(session_id)

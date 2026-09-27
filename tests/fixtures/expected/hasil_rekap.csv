@@ -1,7 +1,7 @@
-nama,nim,prodi,kelas_umum,kode_kelas_pai,dosen_pengampu,nama_nilai,presensi,bacaan,hafalan,evaluasi,total_nilai,abjad,status_nilai,kemiripan_nama,nama_berbeda,catatan_validasi,status_validasi
-Alya Putri,240001,Teknik Informatika,TI-A,1A,Dr. Ana,Alya Putri,90,88,87,92,89,A,Sudah Ada Nilai,1.0,False,-,Valid
-Bagas Pratama,240002,Teknik Informatika,TI-A,1A,Dr. Ana,Bagas Pratama,,,,,,,Belum Ada Nilai,1.0,False,Abjad kosong; Total Nilai kosong,Perlu Dicek
-Citra Lestari,240003,Sistem Informasi,SI-B,2B,Dr. Bima,Siti Rahma,105,80,85,90,90,A,Sudah Ada Nilai,0.43478260869565216,True,Nama berbeda; PRESENSI di luar rentang 0-100,Perlu Dicek
-Deni Saputra,240004,Sistem Informasi,SI-B,2B,Dr. Bima,Deni Saputra,75,80,85,90,82,B,Sudah Ada Nilai,1.0,False,-,Valid
-Eka Wulandari,240005,Manajemen,MN-A,10A,Dr. Citra,Eka Wulandari,90,90,90,90,,B,Sudah Ada Nilai,1.0,False,Total Nilai kosong,Perlu Dicek
-Fajar Nugroho,240006,Manajemen,MN-A,10A,Dr. Citra,,,,,,,,Belum Ada Nilai,1.0,False,Abjad kosong; Total Nilai kosong,Perlu Dicek
+nama,jenis_kelamin,nim,prodi,kode_kelas_pai,nama_nilai,presensi,bacaan,hafalan,evaluasi,total_nilai,abjad,status_nilai,kemiripan_nama,nama_berbeda,catatan_validasi,status_validasi
+Alya Putri,P,240001,Teknik Informatika,1A,Alya Putri,90,88,87,92,89,A,Sudah Ada Nilai,1.0,False,-,Valid
+Bagas Pratama,L,240002,Teknik Informatika,1A,Bagas Pratama,,,,,,,Belum Ada Nilai,1.0,False,Abjad kosong; Total Nilai kosong,Perlu Dicek
+Citra Lestari,P,240003,Sistem Informasi,2B,Siti Rahma,105,80,85,90,90,A,Sudah Ada Nilai,0.43478260869565216,True,Nama berbeda; PRESENSI di luar rentang 0-100,Perlu Dicek
+Deni Saputra,L,240004,Sistem Informasi,2B,Deni Saputra,75,80,85,90,82,B,Sudah Ada Nilai,1.0,False,-,Valid
+Eka Wulandari,P,240005,Manajemen,10A,Eka Wulandari,90,90,90,90,,B,Sudah Ada Nilai,1.0,False,Total Nilai kosong,Perlu Dicek
+Fajar Nugroho,L,240006,Manajemen,10A,,,,,,,,Belum Ada Nilai,1.0,False,Abjad kosong; Total Nilai kosong,Perlu Dicek

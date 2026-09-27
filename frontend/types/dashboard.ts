@@ -30,7 +30,7 @@ export type RekapRow = {
   nama: string;
   prodi: string;
   kelas: string;
-  dosen: string;
+  jenisKelamin: string;
   presensi: number;
   bacaan: number;
   hafalan: number;
@@ -70,4 +70,15 @@ export type RapikanProcessResponse = {
   summary: { total_data: number; total_sheet: number };
   preview: ApiRecord[];
   sheet_preview: ApiRecord[];
+};
+
+export type RekapJilidProcessResponse = {
+  session_id: string;
+  summary: {
+    total_dinilai: number;
+    total_terklasifikasi: number;
+    total_bermasalah: number;
+  };
+  ringkasan_jilid: ApiRecord[];
+  data_bermasalah: ApiRecord[];
 };

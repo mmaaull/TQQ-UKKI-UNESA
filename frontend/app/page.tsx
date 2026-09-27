@@ -12,6 +12,7 @@ import { ProblemTable } from "@/components/ProblemTable";
 import { ProcessCard } from "@/components/ProcessCard";
 import { ProgressChart } from "@/components/ProgressChart";
 import { RapikanSection } from "@/components/RapikanSection";
+import { RekapJilidSection } from "@/components/RekapJilidSection";
 import { RekapTable } from "@/components/RekapTable";
 import { StatCard } from "@/components/StatCard";
 import { UploadCard } from "@/components/UploadCard";
@@ -80,6 +81,7 @@ export default function Home() {
       Validasi: "validasi-section",
       "Hasil Rekap": "hasil-rekap-section",
       Export: "export-section",
+      "Rekap Jilid": "rekap-jilid-section",
       Rapikan: "rapikan-section",
     };
     const targetId = sectionMap[item];
@@ -190,7 +192,7 @@ export default function Home() {
             key={`peserta-${uploadResetKey}`}
             kind="peserta"
             title="File Peserta"
-            description="Upload file data peserta sesuai format"
+            description="Kolom: Nama, Jenis Kelamin, NIM, Kelas PAI, Program Studi"
             onFileChange={(file) => setSelectedFile("peserta", file)}
           />
           <UploadCard
@@ -281,6 +283,10 @@ export default function Home() {
 
         <div id="export-section">
           <ExportSection sessionId={sessionId} />
+        </div>
+
+        <div id="rekap-jilid-section">
+          <RekapJilidSection />
         </div>
 
         <div id="rapikan-section">

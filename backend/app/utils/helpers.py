@@ -54,6 +54,36 @@ def normalize_nim(value: Any) -> str:
     return text
 
 
+def normalize_gender(value: Any) -> str:
+    """Kanonisasi jenis kelamin ke 'L'/'P', string kosong bila tidak dikenali."""
+    if pd.isna(value):
+        return ""
+    text = str(value).strip().upper()
+    if text in {"L", "LAKI-LAKI", "LAKI LAKI", "LAKI", "PRIA", "M", "MALE"}:
+        return "L"
+    if text in {"P", "PEREMPUAN", "WANITA", "F", "FEMALE"}:
+        return "P"
+    return ""
+
+
+def read_all_sheets(uploaded_file) -> pd.DataFrame:
+    """Membaca seluruh sheet Excel/CSV lalu menggabungkan baris yang tidak kosong."""
+    filename = uploaded_file.name.lower()
+    if filename.endswith(".csv"):
+        uploaded_file.seek(0)
+        return pd.read_csv(uploaded_file, dtype=str)
+    if not filename.endswith((".xlsx", ".xls")):
+        raise ValueError("Format file tidak didukung. Gunakan .xlsx, .xls, atau .csv")
+
+    uploaded_file.seek(0)
+    sheets = pd.read_excel(uploaded_file, sheet_name=None, dtype=str)
+    frames = [sheet.dropna(how="all") for sheet in sheets.values()]
+    frames = [frame for frame in frames if not frame.empty]
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True, sort=False)
+
+
 def normalize_name_for_compare(value: Any) -> str:
     text = normalize_text(value).lower()
     text = text.replace(".", " ")

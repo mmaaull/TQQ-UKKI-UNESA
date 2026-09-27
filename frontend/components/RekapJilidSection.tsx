@@ -1,0 +1,298 @@
+"use client";
+
+import {
+  AlertCircle,
+  BookMarked,
+  CheckCircle2,
+  Download,
+  FileSpreadsheet,
+  LoaderCircle,
+  RotateCcw,
+  UploadCloud,
+  UsersRound,
+} from "lucide-react";
+import { useId, useState } from "react";
+
+import { downloadRekapJilid, processRekapJilid } from "@/lib/api";
+import type { ApiRecord, ExportStatus, ProcessStatus, RekapJilidProcessResponse } from "@/types/dashboard";
+
+function MiniUpload({
+  label,
+  hint,
+  file,
+  disabled,
+  onFileChange,
+}: {
+  label: string;
+  hint: string;
+  file: File | null;
+  disabled: boolean;
+  onFileChange: (file: File | null) => void;
+}) {
+  const inputId = useId();
+  return (
+    <label
+      className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-5 text-center transition ${
+        disabled ? "cursor-not-allowed opacity-60" : "hover:border-blue-400 hover:bg-blue-50"
+      }`}
+      htmlFor={inputId}
+    >
+      <UploadCloud className="text-blue-700" size={28} />
+      <p className="mt-2 text-sm font-semibold text-slate-700">{file?.name ?? label}</p>
+      <p className="mt-1 text-xs text-slate-500">{hint}</p>
+      <span className="mt-3 rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white">
+        {file ? "Ganti File" : "Pilih File"}
+      </span>
+      <input
+        accept=".xlsx,.xls"
+        className="sr-only"
+        disabled={disabled}
+        id={inputId}
+        onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
+        type="file"
+      />
+    </label>
+  );
+}
+
+function RingkasanTable({ rows }: { rows: ApiRecord[] }) {
+  if (rows.length === 0) {
+    return <p className="px-4 py-6 text-center text-sm text-slate-500">Tidak ada data untuk ditampilkan.</p>;
+  }
+  const columns = Object.keys(rows[0]);
+  return (
+    <div className="overflow-x-auto rounded-xl border border-slate-200">
+      <table className="w-full border-collapse text-left text-xs">
+        <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          <tr>
+            {columns.map((column) => (
+              <th className="whitespace-nowrap border-b border-slate-200 px-4 py-3" key={column}>
+                {column}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+          {rows.map((row, index) => (
+            <tr className="transition-colors hover:bg-blue-50/50" key={index}>
+              {columns.map((column) => (
+                <td className="px-4 py-3" key={column}>
+                  {row[column] === null || row[column] === "" ? "-" : String(row[column])}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function RekapJilidSection() {
+  const [masterFile, setMasterFile] = useState<File | null>(null);
+  const [penilaianFile, setPenilaianFile] = useState<File | null>(null);
+  const [status, setStatus] = useState<ProcessStatus>("idle");
+  const [downloadStatus, setDownloadStatus] = useState<ExportStatus>("idle");
+  const [error, setError] = useState("");
+  const [downloadMessage, setDownloadMessage] = useState("");
+  const [result, setResult] = useState<RekapJilidProcessResponse | null>(null);
+  const [inputResetKey, setInputResetKey] = useState(0);
+
+  const isProcessing = status === "processing";
+  const canProcess = Boolean(masterFile && penilaianFile) && (status === "ready" || status === "error");
+
+  function resetResultState() {
+    setResult(null);
+    setError("");
+    setDownloadMessage("");
+    setDownloadStatus("idle");
+  }
+
+  function handleMasterChange(file: File | null) {
+    setMasterFile(file);
+    resetResultState();
+    setStatus(file && penilaianFile ? "ready" : "idle");
+  }
+
+  function handlePenilaianChange(file: File | null) {
+    setPenilaianFile(file);
+    resetResultState();
+    setStatus(masterFile && file ? "ready" : "idle");
+  }
+
+  async function handleProcess() {
+    if (!masterFile || !penilaianFile || !canProcess) return;
+    setStatus("processing");
+    setError("");
+    try {
+      setResult(await processRekapJilid(masterFile, penilaianFile));
+      setStatus("success");
+    } catch (caughtError) {
+      setStatus("error");
+      setError(caughtError instanceof Error ? caughtError.message : "Proses rekap jilid gagal.");
+    }
+  }
+
+  async function handleDownload() {
+    if (!result) return;
+    setDownloadStatus("downloading");
+    setDownloadMessage("");
+    try {
+      setDownloadMessage(`${await downloadRekapJilid(result.session_id)} berhasil diunduh.`);
+      setDownloadStatus("success");
+    } catch (caughtError) {
+      setDownloadMessage(
+        caughtError instanceof Error ? caughtError.message : "Unduhan hasil rekap jilid gagal."
+      );
+      setDownloadStatus("error");
+    }
+  }
+
+  function handleReset() {
+    setMasterFile(null);
+    setPenilaianFile(null);
+    setInputResetKey((value) => value + 1);
+    setStatus("idle");
+    resetResultState();
+  }
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div>
+        <h2 className="text-base font-semibold text-slate-900">Rekap Pembagian Kelas Jilid</h2>
+        <p className="mt-1 text-xs leading-5 text-slate-500">
+          Kelompokkan peserta ke Jilid 1-4 berdasarkan Total Nilai tashih, dipisah antara peserta
+          laki-laki dan perempuan menggunakan data jenis kelamin dari file master.
+        </p>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        <div key={`master-${inputResetKey}`}>
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+            <UsersRound size={14} /> File Master (Data Keseluruhan Peserta)
+          </p>
+          <MiniUpload
+            disabled={isProcessing}
+            file={masterFile}
+            hint="Kolom: Nama, Jenis Kelamin, NIM, Kelas PAI, Program Studi"
+            label="Upload file master"
+            onFileChange={handleMasterChange}
+          />
+        </div>
+
+        <div key={`penilaian-${inputResetKey}`}>
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+            <FileSpreadsheet size={14} /> File Penilaian Tashih
+          </p>
+          <MiniUpload
+            disabled={isProcessing}
+            file={penilaianFile}
+            hint="Berisi NIM dan Total Nilai hasil tes tashih"
+            label="Upload file penilaian"
+            onFileChange={handlePenilaianChange}
+          />
+        </div>
+
+        <div className="flex flex-col justify-center gap-2">
+          <button
+            className="flex items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+            disabled={!canProcess}
+            onClick={handleProcess}
+            type="button"
+          >
+            {isProcessing ? <LoaderCircle className="animate-spin" size={18} /> : <BookMarked size={18} />}
+            {isProcessing ? "Memproses..." : status === "error" ? "Coba Proses Lagi" : "Proses Rekap Jilid"}
+          </button>
+
+          <button
+            className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition-all shadow-sm ${
+              status === "success"
+                ? "bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-md shadow-emerald-600/20 cursor-pointer active:scale-[0.98]"
+                : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60"
+            }`}
+            disabled={status !== "success" || downloadStatus === "downloading"}
+            onClick={handleDownload}
+            type="button"
+          >
+            {downloadStatus === "downloading" ? (
+              <LoaderCircle className="animate-spin" size={18} />
+            ) : (
+              <Download size={18} />
+            )}
+            {downloadStatus === "downloading" ? "Mengunduh..." : "Download Hasil"}
+          </button>
+
+          <button
+            className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-slate-600 hover:text-blue-700"
+            onClick={handleReset}
+            type="button"
+          >
+            <RotateCcw size={14} />
+            Mulai File Baru
+          </button>
+        </div>
+      </div>
+
+      {isProcessing && (
+        <p className="mt-4 flex items-center gap-2 text-sm text-blue-700">
+          <LoaderCircle className="animate-spin" size={16} />
+          Sedang mencocokkan data master dan menghitung pembagian jilid...
+        </p>
+      )}
+
+      {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+
+      {downloadMessage && (
+        <p
+          className={`mt-4 flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
+            downloadStatus === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+          }`}
+        >
+          {downloadStatus === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+          {downloadMessage}
+        </p>
+      )}
+
+      {result && (
+        <div className="mt-5 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl bg-blue-50 p-4">
+              <p className="text-xs font-semibold text-blue-700">Total Peserta Dinilai</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">
+                {result.summary.total_dinilai.toLocaleString("id-ID")}
+              </p>
+            </div>
+            <div className="rounded-xl bg-emerald-50 p-4">
+              <p className="text-xs font-semibold text-emerald-700">Berhasil Diklasifikasikan</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">
+                {result.summary.total_terklasifikasi.toLocaleString("id-ID")}
+              </p>
+            </div>
+            <div className="rounded-xl bg-red-50 p-4">
+              <p className="text-xs font-semibold text-red-700">Data Bermasalah</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">
+                {result.summary.total_bermasalah.toLocaleString("id-ID")}
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="mb-2 text-sm font-bold text-slate-800">Ringkasan Jumlah per Jilid</h3>
+            <RingkasanTable rows={result.ringkasan_jilid} />
+          </div>
+
+          {result.summary.total_bermasalah > 0 && (
+            <div>
+              <h3 className="mb-2 text-sm font-bold text-slate-800">Data Bermasalah</h3>
+              <p className="mb-2 text-xs text-slate-500">
+                Data ini dikeluarkan dari sheet Jilid dan bisa dicek manual pada sheet &quot;Data Bermasalah&quot;
+                di file hasil unduhan.
+              </p>
+              <RingkasanTable rows={result.data_bermasalah} />
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}

@@ -14,6 +14,7 @@ from backend.app.utils.helpers import (
     is_blank,
     name_similarity,
     natural_sort_kelas_key,
+    normalize_gender,
     normalize_nim,
 )
 
@@ -63,6 +64,8 @@ def process_rekap(peserta_df: pd.DataFrame, nilai_df: pd.DataFrame) -> Dict[str,
 
     peserta_clean["nim"] = peserta_clean["nim"].apply(normalize_nim)
     nilai_clean["nim"] = nilai_clean["nim"].apply(normalize_nim)
+    if "jenis_kelamin" in peserta_clean.columns:
+        peserta_clean["jenis_kelamin"] = peserta_clean["jenis_kelamin"].apply(normalize_gender)
 
     peserta_for_merge = peserta_clean[peserta_clean["nim"].ne("")].copy()
     nilai_for_merge = nilai_clean[nilai_clean["nim"].ne("")].copy()

@@ -13,9 +13,9 @@ const columns = [
   "No",
   "NIM",
   "Nama",
+  "Jenis Kelamin",
   "Prodi",
   "Kelas PAI",
-  "Dosen Pengampu",
   "Presensi",
   "Bacaan",
   "Hafalan",
@@ -173,9 +173,9 @@ export function RekapTable({ rows, title = "Preview Hasil Rekap", subtitle }: Re
                       <td className="px-4 py-3 text-slate-500">{globalIndex}</td>
                       <td className="px-4 py-3 font-medium">{row.nim}</td>
                       <td className="px-4 py-3 font-semibold text-slate-900">{row.nama}</td>
+                      <td className="px-4 py-3 text-slate-500">{row.jenisKelamin || "-"}</td>
                       <td className="max-w-40 truncate px-4 py-3 text-slate-500">{row.prodi}</td>
                       <td className="px-4 py-3">{row.kelas}</td>
-                      <td className="max-w-40 truncate px-4 py-3 text-slate-500">{row.dosen}</td>
                       <td className="px-4 py-3 text-right">{row.presensi || "-"}</td>
                       <td className="px-4 py-3 text-right">{row.bacaan || "-"}</td>
                       <td className="px-4 py-3 text-right">{row.hafalan || "-"}</td>

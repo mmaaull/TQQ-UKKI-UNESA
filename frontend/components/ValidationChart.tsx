@@ -11,7 +11,13 @@ export type ValidationChartProps = {
   onViewDetails?: () => void;
 };
 
-function CustomTooltip({ active, payload, total }: any) {
+type ValidationTooltipProps = {
+  active?: boolean;
+  payload?: Array<{ payload: ChartDatum }>;
+  total: number;
+};
+
+function CustomTooltip({ active, payload, total }: ValidationTooltipProps) {
   if (active && payload && payload.length) {
     const item: ChartDatum = payload[0].payload;
     const percent = total > 0 ? ((item.value / total) * 100).toFixed(1) : "0";

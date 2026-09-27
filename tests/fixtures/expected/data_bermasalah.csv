@@ -1,11 +1,11 @@
-Sumber,Jenis Masalah,NIM,Nama File Peserta,Nama File Nilai,Kode Kelas PAI,Dosen Pengampu,Kolom,Nilai Terdeteksi,Keterangan
+Sumber,Jenis Masalah,NIM,Nama File Peserta,Nama File Nilai,Kode Kelas PAI,Jenis Kelamin,Kolom,Nilai Terdeteksi,Keterangan
 File Nilai,NIM di file nilai tidak ada di file peserta,249999,,Peserta Tidak Terdaftar,,,,,"Ada nilai untuk NIM ini, tetapi NIM tidak ditemukan di file peserta."
-File Nilai,Abjad kosong,240006,Fajar Nugroho,,10A,Dr. Citra,,,Kolom ABJAD kosong atau peserta belum ditemukan di file nilai.
-File Nilai,Abjad kosong,240002,Bagas Pratama,Bagas Pratama,1A,Dr. Ana,,,Kolom ABJAD kosong atau peserta belum ditemukan di file nilai.
-File Nilai,Total Nilai kosong,240005,Eka Wulandari,Eka Wulandari,10A,Dr. Citra,,,Kolom TOTAL NILAI kosong atau peserta belum ditemukan di file nilai.
-File Nilai,Total Nilai kosong,240006,Fajar Nugroho,,10A,Dr. Citra,,,Kolom TOTAL NILAI kosong atau peserta belum ditemukan di file nilai.
-File Nilai,Total Nilai kosong,240002,Bagas Pratama,Bagas Pratama,1A,Dr. Ana,,,Kolom TOTAL NILAI kosong atau peserta belum ditemukan di file nilai.
-Gabungan Peserta + Nilai,Nama berbeda antara file peserta dan file nilai,240003,Citra Lestari,Siti Rahma,2B,Dr. Bima,,,Kemiripan nama sekitar 43%. Perlu dicek manual.
+File Nilai,Abjad kosong,240006,Fajar Nugroho,,10A,L,,,Kolom ABJAD kosong atau peserta belum ditemukan di file nilai.
+File Nilai,Abjad kosong,240002,Bagas Pratama,Bagas Pratama,1A,L,,,Kolom ABJAD kosong atau peserta belum ditemukan di file nilai.
+File Nilai,Total Nilai kosong,240005,Eka Wulandari,Eka Wulandari,10A,P,,,Kolom TOTAL NILAI kosong atau peserta belum ditemukan di file nilai.
+File Nilai,Total Nilai kosong,240006,Fajar Nugroho,,10A,L,,,Kolom TOTAL NILAI kosong atau peserta belum ditemukan di file nilai.
+File Nilai,Total Nilai kosong,240002,Bagas Pratama,Bagas Pratama,1A,L,,,Kolom TOTAL NILAI kosong atau peserta belum ditemukan di file nilai.
+Gabungan Peserta + Nilai,Nama berbeda antara file peserta dan file nilai,240003,Citra Lestari,Siti Rahma,2B,P,,,Kemiripan nama sekitar 43%. Perlu dicek manual.
 File Nilai,NIM duplikat di file nilai,240004,,Deni Saputra,,,,,NIM muncul lebih dari sekali di file nilai. Sistem memakai data terakhir saat rekap.
 File Nilai,NIM duplikat di file nilai,240004,,Deni Saputra,,,,,NIM muncul lebih dari sekali di file nilai. Sistem memakai data terakhir saat rekap.
-File Nilai,Nilai tidak valid atau di luar rentang,240003,Citra Lestari,Siti Rahma,2B,Dr. Bima,PRESENSI,105,Kolom PRESENSI bernilai '105' dan di luar rentang 0-100. Rentang yang diterima: 0-100.
+File Nilai,Nilai tidak valid atau di luar rentang,240003,Citra Lestari,Siti Rahma,2B,P,PRESENSI,105,Kolom PRESENSI bernilai '105' dan di luar rentang 0-100. Rentang yang diterima: 0-100.

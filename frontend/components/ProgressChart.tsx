@@ -12,7 +12,12 @@ export type ProgressChartProps = {
   lastProcessed: string;
 };
 
-function CustomTooltip({ active, payload }: any) {
+type ChartTooltipProps = {
+  active?: boolean;
+  payload?: Array<{ payload: ChartDatum }>;
+};
+
+function CustomTooltip({ active, payload }: ChartTooltipProps) {
   if (active && payload && payload.length) {
     const item: ChartDatum = payload[0].payload;
     return (

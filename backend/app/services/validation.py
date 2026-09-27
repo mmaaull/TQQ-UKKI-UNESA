@@ -47,13 +47,13 @@ def get_score_range_notes(row: pd.Series) -> List[str]:
 
 def add_problem(
     problems: List[Dict[str, Any]], sumber: str, jenis: str, nim: Any = "", nama_peserta: Any = "",
-    nama_nilai: Any = "", kode_kelas_pai: Any = "", dosen_pengampu: Any = "", keterangan: str = "",
+    nama_nilai: Any = "", kode_kelas_pai: Any = "", jenis_kelamin: Any = "", keterangan: str = "",
     kolom: str = "", nilai_terdeteksi: Any = "",
 ):
     problems.append({
         "Sumber": sumber, "Jenis Masalah": jenis, "NIM": normalize_text(nim),
         "Nama File Peserta": normalize_text(nama_peserta), "Nama File Nilai": normalize_text(nama_nilai),
-        "Kode Kelas PAI": normalize_text(kode_kelas_pai), "Dosen Pengampu": normalize_text(dosen_pengampu),
+        "Kode Kelas PAI": normalize_text(kode_kelas_pai), "Jenis Kelamin": normalize_text(jenis_kelamin),
         "Kolom": normalize_text(kolom), "Nilai Terdeteksi": normalize_text(nilai_terdeteksi),
         "Keterangan": keterangan,
     })
@@ -69,13 +69,13 @@ def build_problem_table(
         add_problem(problems, "File Nilai", "NIM di file nilai tidak ada di file peserta", row.get("nim", ""), "", row.get("nama_nilai", ""), "", "", "Ada nilai untuk NIM ini, tetapi NIM tidak ditemukan di file peserta.")
 
     for _, row in rekap[rekap["abjad"].apply(is_blank)].iterrows():
-        add_problem(problems, "File Nilai", "Abjad kosong", row.get("nim", ""), row.get("nama", ""), row.get("nama_nilai", ""), row.get("kode_kelas_pai", ""), row.get("dosen_pengampu", ""), "Kolom ABJAD kosong atau peserta belum ditemukan di file nilai.")
+        add_problem(problems, "File Nilai", "Abjad kosong", row.get("nim", ""), row.get("nama", ""), row.get("nama_nilai", ""), row.get("kode_kelas_pai", ""), row.get("jenis_kelamin", ""), "Kolom ABJAD kosong atau peserta belum ditemukan di file nilai.")
 
     for _, row in rekap[rekap["total_nilai"].apply(is_blank)].iterrows():
-        add_problem(problems, "File Nilai", "Total Nilai kosong", row.get("nim", ""), row.get("nama", ""), row.get("nama_nilai", ""), row.get("kode_kelas_pai", ""), row.get("dosen_pengampu", ""), "Kolom TOTAL NILAI kosong atau peserta belum ditemukan di file nilai.")
+        add_problem(problems, "File Nilai", "Total Nilai kosong", row.get("nim", ""), row.get("nama", ""), row.get("nama_nilai", ""), row.get("kode_kelas_pai", ""), row.get("jenis_kelamin", ""), "Kolom TOTAL NILAI kosong atau peserta belum ditemukan di file nilai.")
 
     for _, row in rekap[rekap["nama_berbeda"].fillna(False)].iterrows():
-        add_problem(problems, "Gabungan Peserta + Nilai", "Nama berbeda antara file peserta dan file nilai", row.get("nim", ""), row.get("nama", ""), row.get("nama_nilai", ""), row.get("kode_kelas_pai", ""), row.get("dosen_pengampu", ""), f"Kemiripan nama sekitar {row.get('kemiripan_nama', 0):.0%}. Perlu dicek manual.")
+        add_problem(problems, "Gabungan Peserta + Nilai", "Nama berbeda antara file peserta dan file nilai", row.get("nim", ""), row.get("nama", ""), row.get("nama_nilai", ""), row.get("kode_kelas_pai", ""), row.get("jenis_kelamin", ""), f"Kemiripan nama sekitar {row.get('kemiripan_nama', 0):.0%}. Perlu dicek manual.")
 
     duplicate_nilai = nilai_df[nilai_df["nim"].ne("") & nilai_df["nim"].duplicated(keep=False)]
     for _, row in duplicate_nilai.iterrows():
@@ -85,9 +85,9 @@ def build_problem_table(
         for col, config in SCORE_RANGE_CONFIG.items():
             issue = score_range_issue(row.get(col, ""), config["min"], config["max"])
             if issue:
-                add_problem(problems, "File Nilai", "Nilai tidak valid atau di luar rentang", row.get("nim", ""), row.get("nama", ""), row.get("nama_nilai", ""), row.get("kode_kelas_pai", ""), row.get("dosen_pengampu", ""), f"Kolom {config['label']} bernilai '{normalize_text(row.get(col, ''))}' dan {issue}. Rentang yang diterima: {config['min']:g}-{config['max']:g}.", kolom=config["label"], nilai_terdeteksi=row.get(col, ""))
+                add_problem(problems, "File Nilai", "Nilai tidak valid atau di luar rentang", row.get("nim", ""), row.get("nama", ""), row.get("nama_nilai", ""), row.get("kode_kelas_pai", ""), row.get("jenis_kelamin", ""), f"Kolom {config['label']} bernilai '{normalize_text(row.get(col, ''))}' dan {issue}. Rentang yang diterima: {config['min']:g}-{config['max']:g}.", kolom=config["label"], nilai_terdeteksi=row.get(col, ""))
 
-    columns = ["Sumber", "Jenis Masalah", "NIM", "Nama File Peserta", "Nama File Nilai", "Kode Kelas PAI", "Dosen Pengampu", "Kolom", "Nilai Terdeteksi", "Keterangan"]
+    columns = ["Sumber", "Jenis Masalah", "NIM", "Nama File Peserta", "Nama File Nilai", "Kode Kelas PAI", "Jenis Kelamin", "Kolom", "Nilai Terdeteksi", "Keterangan"]
     if not problems:
         return pd.DataFrame(columns=columns)
 

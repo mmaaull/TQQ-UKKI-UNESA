@@ -10,7 +10,7 @@ export type NavbarProps = {
   onNavigate?: (item: string) => void;
 };
 
-const defaultItems = ["Dashboard", "Upload", "Hasil Rekap", "Validasi", "Export", "Rapikan"];
+const defaultItems = ["Dashboard", "Upload", "Hasil Rekap", "Validasi", "Export", "Rekap Jilid", "Rapikan"];
 
 export function Navbar({
   activeItem = "Dashboard",

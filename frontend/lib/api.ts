@@ -7,6 +7,7 @@ import type {
   RekapProcessResponse,
   RekapRow,
   RapikanProcessResponse,
+  RekapJilidProcessResponse,
   Summary,
 } from "@/types/dashboard";
 
@@ -142,6 +143,35 @@ export async function downloadRapikan(sessionId: string): Promise<string> {
   return triggerBrowserDownload(response, "rekap_tqq_per_kode_kelas_dan_prodi.xlsx");
 }
 
+export async function processRekapJilid(masterFile: File, penilaianFile: File): Promise<RekapJilidProcessResponse> {
+  const formData = new FormData();
+  formData.append("master_file", masterFile);
+  formData.append("penilaian_file", penilaianFile);
+  const response = await fetch(`${apiUrl}/api/rekap-jilid/process`, { method: "POST", body: formData });
+  if (!response.ok) {
+    let message = "Proses rekap jilid gagal. Silakan coba kembali.";
+    try {
+      const body: unknown = await response.json();
+      if (typeof body === "object" && body !== null && "detail" in body) {
+        const detail = body.detail;
+        message = typeof detail === "string" ? detail : JSON.stringify(detail);
+      }
+    } catch {
+      // Gunakan pesan default jika response error bukan JSON.
+    }
+    throw new ApiError(message, response.status);
+  }
+  return response.json() as Promise<RekapJilidProcessResponse>;
+}
+
+export async function downloadRekapJilid(sessionId: string): Promise<string> {
+  const response = await fetch(`${apiUrl}/api/rekap-jilid/${sessionId}/download`);
+  if (!response.ok) {
+    throw new ApiError("Unduhan hasil rekap jilid gagal. Silakan proses ulang file.", response.status);
+  }
+  return triggerBrowserDownload(response, "rekap_pembagian_kelas_jilid.xlsx");
+}
+
 export function makeKpiItems(summary: Summary): KpiItem[] {
   return [
     { label: "Total Peserta", value: formatNumber(summary.total_peserta), note: "100% dari total data", tone: "blue" },
@@ -166,7 +196,7 @@ export function mapRekapRows(records: ApiRecord[]): RekapRow[] {
     nama: textOf(record, ["nama", "Nama"]),
     prodi: textOf(record, ["prodi", "Prodi"]),
     kelas: textOf(record, ["kode_kelas_pai", "Kode Kelas PAI", "kelas_umum", "Kelas"]),
-    dosen: textOf(record, ["dosen_pengampu", "Dosen Pengampu"]),
+    jenisKelamin: textOf(record, ["jenis_kelamin", "Jenis Kelamin"]),
     presensi: numberOf(record, ["presensi", "Presensi"]),
     bacaan: numberOf(record, ["bacaan", "Bacaan"]),
     hafalan: numberOf(record, ["hafalan", "Hafalan"]),
