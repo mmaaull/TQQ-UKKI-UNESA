@@ -6,13 +6,10 @@ import { useMemo, useState } from "react";
 import { ClassChart } from "@/components/ClassChart";
 import { ClassDetailModal } from "@/components/ClassDetailModal";
 import { ExportSection } from "@/components/ExportSection";
-import { GuideModal } from "@/components/GuideModal";
-import { Navbar } from "@/components/Navbar";
 import { ProblemTable } from "@/components/ProblemTable";
 import { ProcessCard } from "@/components/ProcessCard";
 import { ProgressChart } from "@/components/ProgressChart";
 import { RapikanSection } from "@/components/RapikanSection";
-import { RekapJilidSection } from "@/components/RekapJilidSection";
 import { RekapTable } from "@/components/RekapTable";
 import { StatCard } from "@/components/StatCard";
 import { UploadCard } from "@/components/UploadCard";
@@ -44,7 +41,7 @@ function formatProcessedAt(): string {
   }).format(new Date());
 }
 
-export default function Home() {
+export default function RekapNilaiPage() {
   const [pesertaFile, setPesertaFile] = useState<File | null>(null);
   const [nilaiFile, setNilaiFile] = useState<File | null>(null);
   const [status, setStatus] = useState<ProcessStatus>("idle");
@@ -54,8 +51,6 @@ export default function Home() {
   const [processedAt, setProcessedAt] = useState("");
   const [uploadResetKey, setUploadResetKey] = useState(0);
 
-  const [activeNavItem, setActiveNavItem] = useState("Dashboard");
-  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [isClassDetailOpen, setIsClassDetailOpen] = useState(false);
 
   const summary = result?.summary ?? emptySummary;
@@ -72,26 +67,6 @@ export default function Home() {
     if (status === "success" && result !== null) return 3;
     return 1;
   }, [status, result]);
-
-  function handleNavigate(item: string) {
-    setActiveNavItem(item);
-    const sectionMap: Record<string, string> = {
-      Dashboard: "hero-section",
-      Upload: "rekap-data-section",
-      Validasi: "validasi-section",
-      "Hasil Rekap": "hasil-rekap-section",
-      Export: "export-section",
-      "Rekap Jilid": "rekap-jilid-section",
-      Rapikan: "rapikan-section",
-    };
-    const targetId = sectionMap[item];
-    if (targetId) {
-      const element = document.getElementById(targetId);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
-    }
-  }
 
   function resetResultState() {
     setError("");
@@ -145,14 +120,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900">
-      <Navbar
-        activeItem={activeNavItem}
-        onNavigate={handleNavigate}
-        onOpenGuide={() => setIsGuideOpen(true)}
-      />
-
-      <GuideModal isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
+    <>
       <ClassDetailModal
         isOpen={isClassDetailOpen}
         onClose={() => setIsClassDetailOpen(false)}
@@ -160,13 +128,10 @@ export default function Home() {
       />
 
       <main className="mx-auto max-w-[1440px] space-y-6 px-4 py-5 sm:px-8 sm:py-7 lg:px-10 lg:py-8">
-        <section
-          id="hero-section"
-          className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 py-6 shadow-sm sm:px-8 sm:py-8"
-        >
+        <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 py-6 shadow-sm sm:px-8 sm:py-8">
           <div className="relative z-10 max-w-3xl">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold text-blue-700">
-              <Sparkles size={13} /> Sistem manajemen rekap nilai
+              <Sparkles size={13} /> Fitur Rekap Nilai
             </div>
             <h1 className="text-3xl font-bold tracking-[-0.035em] text-slate-900 sm:text-4xl">
               Rekap Nilai TQQ Akbar UNESA
@@ -186,7 +151,7 @@ export default function Home() {
 
         <WorkflowStepper steps={workflowSteps} activeStep={currentStep} />
 
-        <section id="rekap-data-section" className="grid gap-4 lg:grid-cols-3">
+        <section className="grid gap-4 lg:grid-cols-3">
           <UploadCard
             disabled={isProcessing}
             key={`peserta-${uploadResetKey}`}
@@ -221,7 +186,7 @@ export default function Home() {
 
         {hasDashboard ? (
           <>
-            <section id="dashboard-section" className="space-y-5">
+            <section className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
                 {kpiItems.map((item) => (
                   <StatCard item={item} key={item.label} />
@@ -260,12 +225,10 @@ export default function Home() {
               </div>
             </section>
 
-            <div id="hasil-rekap-section">
-              <RekapTable
-                rows={rekapRows}
-                subtitle={`Menampilkan ${rekapRows.length} data hasil rekap`}
-              />
-            </div>
+            <RekapTable
+              rows={rekapRows}
+              subtitle={`Menampilkan ${rekapRows.length} data hasil rekap`}
+            />
 
             <div id="validasi-section">
               <ProblemTable rows={result.data_bermasalah} />
@@ -281,36 +244,10 @@ export default function Home() {
           </section>
         )}
 
-        <div id="export-section">
-          <ExportSection sessionId={sessionId} />
-        </div>
+        <ExportSection sessionId={sessionId} />
 
-        <div id="rekap-jilid-section">
-          <RekapJilidSection />
-        </div>
-
-        <div id="rapikan-section">
-          <RapikanSection />
-        </div>
+        <RapikanSection />
       </main>
-
-      <footer className="mt-6 border-t border-slate-200 bg-white py-6 text-xs text-slate-500">
-        <div className="mx-auto flex max-w-[1440px] flex-col justify-between gap-3 px-4 sm:flex-row sm:px-8 lg:px-10">
-          <p>© 2026 UKKI UNESA — Sistem Manajemen Akademik</p>
-          <div className="flex gap-6">
-            <button className="transition hover:text-blue-700" type="button">
-              Kebijakan Privasi
-            </button>
-            <button
-              onClick={() => setIsGuideOpen(true)}
-              className="transition hover:text-blue-700"
-              type="button"
-            >
-              Bantuan & Panduan
-            </button>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </>
   );
 }
