@@ -170,9 +170,11 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
         if reasons:
             valid_mask.append(False)
             jilid_values.append("")
+            prodi_display = row.get("prodi") if master_found and not is_blank(row.get("prodi", "")) else row.get("prodi_nilai", "")
             problems.append({
                 "NIM": row.get("nim", ""),
                 "Nama": row.get("nama") if master_found and not is_blank(row.get("nama", "")) else row.get("nama_nilai", ""),
+                "Program Studi": prodi_display,
                 "Total Nilai": row.get("total_nilai", ""),
                 "Keterangan": "; ".join(reasons),
             })
@@ -207,7 +209,7 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
             })
 
     ringkasan = pd.DataFrame(ringkasan_rows)
-    data_bermasalah = pd.DataFrame(problems, columns=["NIM", "Nama", "Total Nilai", "Keterangan"])
+    data_bermasalah = pd.DataFrame(problems, columns=["NIM", "Nama", "Program Studi", "Total Nilai", "Keterangan"])
 
     summary = {
         "total_dinilai": int(len(penilaian)),
