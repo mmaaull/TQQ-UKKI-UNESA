@@ -9,6 +9,7 @@ import type {
   RapikanProcessResponse,
   RekapJilidProcessResponse,
   Summary,
+  TentorProcessResponse,
 } from "@/types/dashboard";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -170,6 +171,40 @@ export async function downloadRekapJilid(sessionId: string): Promise<string> {
     throw new ApiError("Unduhan hasil rekap jilid gagal. Silakan proses ulang file.", response.status);
   }
   return triggerBrowserDownload(response, "rekap_pembagian_kelas_jilid.xlsx");
+}
+
+export async function processTentor(
+  rekapJilidFile: File,
+  jumlahTentorLakiLaki: number,
+  jumlahTentorPerempuan: number
+): Promise<TentorProcessResponse> {
+  const formData = new FormData();
+  formData.append("rekap_jilid_file", rekapJilidFile);
+  formData.append("jumlah_tentor_laki_laki", String(jumlahTentorLakiLaki));
+  formData.append("jumlah_tentor_perempuan", String(jumlahTentorPerempuan));
+  const response = await fetch(`${apiUrl}/api/tentor/process`, { method: "POST", body: formData });
+  if (!response.ok) {
+    let message = "Proses pembagian tentor gagal. Silakan coba kembali.";
+    try {
+      const body: unknown = await response.json();
+      if (typeof body === "object" && body !== null && "detail" in body) {
+        const detail = body.detail;
+        message = typeof detail === "string" ? detail : JSON.stringify(detail);
+      }
+    } catch {
+      // Gunakan pesan default jika response error bukan JSON.
+    }
+    throw new ApiError(message, response.status);
+  }
+  return response.json() as Promise<TentorProcessResponse>;
+}
+
+export async function downloadTentor(sessionId: string): Promise<string> {
+  const response = await fetch(`${apiUrl}/api/tentor/${sessionId}/download`);
+  if (!response.ok) {
+    throw new ApiError("Unduhan hasil pembagian tentor gagal. Silakan proses ulang file.", response.status);
+  }
+  return triggerBrowserDownload(response, "pembagian_tentor_tqq_akbar.xlsx");
 }
 
 export function makeKpiItems(summary: Summary): KpiItem[] {

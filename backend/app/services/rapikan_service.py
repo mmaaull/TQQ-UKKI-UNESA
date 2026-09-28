@@ -1,6 +1,5 @@
 """Logic mode Rapikan Hasil Rekap tanpa ketergantungan Streamlit."""
 
-import re
 from io import BytesIO
 from typing import Any, Dict, List, Tuple
 
@@ -12,6 +11,7 @@ from backend.app.core.config import (
     REKAP_REQUIRED_COLUMN_LABELS,
 )
 from backend.app.utils.helpers import (
+    clean_sheet_name,
     detect_column_mapping,
     is_blank,
     natural_sort_kelas_key,
@@ -84,24 +84,6 @@ def read_rekap_file(uploaded_file) -> pd.DataFrame:
 
 def drop_rekap_internal_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df.drop(columns=list(REKAP_INTERNAL_COLUMNS.values()), errors="ignore")
-
-
-def clean_sheet_name(name: str, existing_names: set[str]) -> str:
-    """Membersihkan nama sheet Excel, memotong ke 31 karakter, dan menjaga tetap unik."""
-    cleaned = re.sub(r"[\:\?\/\\\\\*\[\]]", " ", str(name))
-    cleaned = re.sub(r"\s+", " ", cleaned).strip() or "Sheet"
-    base_name = cleaned[:31].strip() or "Sheet"
-    sheet_name = base_name
-    used_lower = {existing_name.lower() for existing_name in existing_names}
-    counter = 2
-    while sheet_name.lower() in used_lower:
-        suffix = f" {counter}"
-        max_base_length = 31 - len(suffix)
-        trimmed_base = base_name[:max_base_length].strip() or "Sheet"[:max_base_length]
-        sheet_name = f"{trimmed_base}{suffix}"[:31]
-        counter += 1
-    existing_names.add(sheet_name)
-    return sheet_name
 
 
 def sort_rekap_group_by_nim(group: pd.DataFrame) -> pd.DataFrame:

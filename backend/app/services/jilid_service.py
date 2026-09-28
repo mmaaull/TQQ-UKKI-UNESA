@@ -22,6 +22,7 @@ from backend.app.core.config import (
     PENILAIAN_TASHIH_COLUMN_ALIASES,
     PENILAIAN_TASHIH_REQUIRED_COLUMN_LABELS,
     PESERTA_COLUMN_ALIASES,
+    jilid_sheet_name,
 )
 from backend.app.services.validation import parse_score
 from backend.app.utils.helpers import (
@@ -75,11 +76,16 @@ def read_master_file(uploaded_file) -> pd.DataFrame:
 
 
 def _find_header_row(raw: pd.DataFrame) -> int | None:
-    """Cari baris header asli di file penilaian tashih (ada judul/instruksi di atasnya)."""
+    """Cari baris header asli di file penilaian tashih (ada judul/instruksi di atasnya).
+
+    Hanya kolom NIM yang dijadikan penanda karena kolom Nama bersifat opsional
+    (lihat ``PENILAIAN_TASHIH_REQUIRED_COLUMN_LABELS``); mewajibkan Nama di sini
+    membuat file tanpa kolom Nama gagal terbaca sama sekali.
+    """
     max_scan = min(len(raw), HEADER_SCAN_LIMIT)
     for idx in range(max_scan):
         row_values = {normalize_header(value) for value in raw.iloc[idx].tolist()}
-        if "nama" in row_values and "nim" in row_values:
+        if "nim" in row_values:
             return idx
     return None
 
@@ -145,9 +151,22 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
     penilaian = penilaian_df.copy()
     penilaian["total_score"] = penilaian["total_nilai"].apply(parse_score)
 
-    merged = penilaian.merge(master_df, on="nim", how="left", suffixes=("_nilai", ""))
+    duplicate_nim_rows = penilaian[penilaian["nim"].ne("") & penilaian["nim"].duplicated(keep=False)]
+    penilaian_unique = penilaian.drop_duplicates(subset=["nim"], keep="last")
+
+    merged = penilaian_unique.merge(master_df, on="nim", how="left", suffixes=("_nilai", ""))
 
     problems: List[Dict[str, Any]] = []
+
+    for _, row in duplicate_nim_rows.iterrows():
+        problems.append({
+            "NIM": row.get("nim", ""),
+            "Nama": row.get("nama_nilai", ""),
+            "Program Studi": row.get("prodi_nilai", ""),
+            "Total Nilai": row.get("total_nilai", ""),
+            "Keterangan": "NIM duplikat di file penilaian tashih. Sistem memakai data terakhir saat menghitung jilid.",
+        })
+
     valid_mask: List[bool] = []
     jilid_values: List[str] = []
 
@@ -233,7 +252,7 @@ def export_jilid_excel(groups: Dict[Tuple[str, str], pd.DataFrame], data_bermasa
                 group = groups.get((jilid_label, gender_code))
                 if group is None:
                     group = pd.DataFrame(columns=JILID_OUTPUT_COLUMNS)
-                sheet_name = f"{jilid_label} - {gender_label}"[:31]
+                sheet_name = jilid_sheet_name(jilid_label, gender_label)
                 labeled = group.rename(columns=JILID_OUTPUT_COLUMN_LABELS)
                 labeled.to_excel(writer, sheet_name=sheet_name, index=False)
         data_bermasalah.to_excel(writer, sheet_name="Data Bermasalah", index=False)

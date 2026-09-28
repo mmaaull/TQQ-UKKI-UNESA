@@ -123,3 +123,27 @@ def natural_sort_kelas_key(value: Any) -> Tuple[int, str, str]:
 
 def is_blank(value: Any) -> bool:
     return pd.isna(value) or str(value).strip() == "" or str(value).strip().lower() in {"nan", "none", "-"}
+
+
+def clean_sheet_name(name: str, existing_names: set[str]) -> str:
+    """Membersihkan nama sheet Excel, memotong ke 31 karakter, dan menjaga tetap unik."""
+    cleaned = re.sub(r"[\:\?\/\\\\\*\[\]]", " ", str(name))
+    cleaned = re.sub(r"\s+", " ", cleaned).strip() or "Sheet"
+    base_name = cleaned[:31].strip() or "Sheet"
+    sheet_name = base_name
+    used_lower = {existing_name.lower() for existing_name in existing_names}
+    counter = 2
+    while sheet_name.lower() in used_lower:
+        suffix = f" {counter}"
+        max_base_length = 31 - len(suffix)
+        trimmed_base = base_name[:max_base_length].strip() or "Sheet"[:max_base_length]
+        sheet_name = f"{trimmed_base}{suffix}"[:31]
+        counter += 1
+    existing_names.add(sheet_name)
+    return sheet_name
+
+
+def split_evenly(n_items: int, n_groups: int) -> List[int]:
+    """Bagi ``n_items`` ke ``n_groups`` kelompok serata mungkin (selisih antar kelompok maks. 1)."""
+    base, remainder = divmod(n_items, n_groups)
+    return [base + 1 if i < remainder else base for i in range(n_groups)]

@@ -34,9 +34,17 @@ class JilidSession:
     excel_bytes: bytes
 
 
+@dataclass
+class TentorSession:
+    """Hasil mode pembagian tentor sementara untuk unduhan."""
+
+    excel_bytes: bytes
+
+
 _sessions: Dict[str, RekapSession] = {}
 _rapikan_sessions: Dict[str, RapikanSession] = {}
 _jilid_sessions: Dict[str, JilidSession] = {}
+_tentor_sessions: Dict[str, TentorSession] = {}
 _sessions_lock = RLock()
 
 
@@ -91,3 +99,17 @@ def get_jilid_session(session_id: str) -> Optional[JilidSession]:
     """Ambil sesi rekap jilid dari memori, atau None bila tidak ditemukan."""
     with _sessions_lock:
         return _jilid_sessions.get(session_id)
+
+
+def create_tentor_session(excel_bytes: bytes) -> str:
+    """Simpan hasil pembagian tentor di memori dan return UUID sesi baru."""
+    session_id = str(uuid4())
+    with _sessions_lock:
+        _tentor_sessions[session_id] = TentorSession(excel_bytes=excel_bytes)
+    return session_id
+
+
+def get_tentor_session(session_id: str) -> Optional[TentorSession]:
+    """Ambil sesi pembagian tentor dari memori, atau None bila tidak ditemukan."""
+    with _sessions_lock:
+        return _tentor_sessions.get(session_id)

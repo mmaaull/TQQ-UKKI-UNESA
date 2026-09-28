@@ -82,3 +82,14 @@ export type RekapJilidProcessResponse = {
   ringkasan_jilid: ApiRecord[];
   data_bermasalah: ApiRecord[];
 };
+
+export type TentorProcessResponse = {
+  session_id: string;
+  summary: {
+    total_peserta: number;
+    total_tentor: number;
+    total_tentor_laki_laki: number;
+    total_tentor_perempuan: number;
+  };
+  ringkasan_tentor: ApiRecord[];
+};

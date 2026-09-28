@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Callable
 
 import pandas as pd
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
@@ -26,9 +26,11 @@ from backend.app.services.session_store import (
     create_jilid_session,
     create_rapikan_session,
     create_rekap_session,
+    create_tentor_session,
     get_jilid_session,
     get_rapikan_session,
     get_rekap_session,
+    get_tentor_session,
 )
 from backend.app.services.rapikan_service import (
     RekapRequiredColumnError,
@@ -44,6 +46,13 @@ from backend.app.services.jilid_service import (
     export_jilid_excel,
     read_master_file,
     read_penilaian_tashih_file,
+)
+from backend.app.services.tentor_service import (
+    TentorAllocationError,
+    TentorRequiredDataError,
+    build_tentor_distribution,
+    export_tentor_excel,
+    read_jilid_recap_file,
 )
 from backend.app.utils.helpers import read_all_sheets
 
@@ -330,6 +339,69 @@ def download_rekap_jilid(session_id: str) -> Response:
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={
             "Content-Disposition": 'attachment; filename="rekap_pembagian_kelas_jilid.xlsx"'
+        },
+    )
+
+
+@app.post("/api/tentor/process")
+async def process_tentor_upload(
+    rekap_jilid_file: UploadFile = File(...),
+    jumlah_tentor_laki_laki: int = Form(...),
+    jumlah_tentor_perempuan: int = Form(...),
+) -> dict:
+    """Bagi peserta hasil Rekap Jilid ke tentor sesuai jumlah tentor yang diinput."""
+    if jumlah_tentor_laki_laki < 0 or jumlah_tentor_perempuan < 0:
+        raise HTTPException(status_code=422, detail="Jumlah tentor tidak boleh negatif.")
+
+    filename = rekap_jilid_file.filename or ""
+    if Path(filename).suffix.lower() not in {".xlsx", ".xls"}:
+        raise HTTPException(
+            status_code=415,
+            detail="rekap_jilid_file harus berformat .xlsx atau .xls.",
+        )
+    contents = await rekap_jilid_file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="rekap_jilid_file kosong.")
+    uploaded_file = BytesIO(contents)
+    uploaded_file.name = filename
+
+    try:
+        jilid_groups = read_jilid_recap_file(uploaded_file)
+    except TentorRequiredDataError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"rekap_jilid_file tidak dapat dibaca sebagai file Excel: {exc}",
+        ) from exc
+
+    try:
+        distribution = build_tentor_distribution(
+            jilid_groups, jumlah_tentor_laki_laki, jumlah_tentor_perempuan
+        )
+    except (TentorRequiredDataError, TentorAllocationError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    excel_bytes = export_tentor_excel(distribution["tentor_sheets"], distribution["ringkasan"])
+    session_id = create_tentor_session(excel_bytes)
+    return {
+        "session_id": session_id,
+        "summary": distribution["summary"],
+        "ringkasan_tentor": dataframe_records(distribution["ringkasan"]),
+    }
+
+
+@app.get("/api/tentor/{session_id}/download")
+def download_tentor_result(session_id: str) -> Response:
+    """Download Excel hasil pembagian tentor dari sesi development."""
+    session = get_tentor_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session pembagian tentor tidak ditemukan.")
+    return Response(
+        content=session.excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": 'attachment; filename="pembagian_tentor_tqq_akbar.xlsx"'
         },
     )
 

@@ -137,3 +137,17 @@ JILID_OUTPUT_COLUMN_LABELS = {
     "nama": "Nama", "jenis_kelamin": "Jenis Kelamin", "nim": "NIM",
     "kode_kelas_pai": "Kelas PAI", "prodi": "Program Studi",
 }
+
+
+def jilid_sheet_name(jilid_label: str, gender_label: str) -> str:
+    """Nama sheet Excel untuk kombinasi Jilid + Jenis Kelamin pada hasil Rekap Jilid.
+
+    Dipakai bersama oleh export (``jilid_service``) dan pembacaan ulang file hasil
+    Rekap Jilid (``tentor_service``) agar penamaan sheet selalu konsisten.
+    """
+    return f"{jilid_label} - {gender_label}"[:31]
+
+
+# --- Konfigurasi mode Pembagian Tentor ---
+
+TENTOR_OUTPUT_COLUMNS = list(JILID_OUTPUT_COLUMN_LABELS.values())
