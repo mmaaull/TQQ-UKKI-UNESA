@@ -131,12 +131,48 @@ JILID_LABELS = ["Jilid 1", "Jilid 2", "Jilid 3", "Jilid 4"]
 
 JILID_GENDER_SHEET_LABELS = [("L", "Laki-laki"), ("P", "Perempuan")]
 
-JILID_OUTPUT_COLUMNS = ["nama", "jenis_kelamin", "nim", "kode_kelas_pai", "prodi"]
+JILID_OUTPUT_COLUMNS = ["nama", "jenis_kelamin", "nim", "kode_kelas_pai", "prodi", "keterangan"]
 
 JILID_OUTPUT_COLUMN_LABELS = {
     "nama": "Nama", "jenis_kelamin": "Jenis Kelamin", "nim": "NIM",
-    "kode_kelas_pai": "Kelas PAI", "prodi": "Program Studi",
+    "kode_kelas_pai": "Kelas PAI", "prodi": "Program Studi", "keterangan": "Keterangan",
 }
+
+JILID_AUTO_ASSIGN_NOTE = "Otomatis Jilid 1 - tidak ikut tes tashih gelombang ini"
+
+JILID_NAME_SIMILARITY_THRESHOLD = 0.88
+
+# Kalimat "Keterangan" di tabel Data Bermasalah Rekap Jilid. Ditulis agar
+# panitia (non-teknis) langsung paham apa masalahnya, kenapa itu masalah,
+# dan apa yang perlu dilakukan.
+JILID_PROBLEM_NIM_NOT_IN_MASTER = (
+    "NIM ini ada nilainya di file penilaian, tapi tidak ditemukan di file master. "
+    "Kemungkinan NIM salah ketik, atau mahasiswa ini memang belum terdaftar di file master."
+)
+JILID_PROBLEM_GENDER_UNKNOWN = (
+    "Kolom Jenis Kelamin mahasiswa ini kosong/tidak dikenali (bukan L atau P) di file master, "
+    "jadi sistem tidak bisa menentukan masuk sheet Laki-laki atau Perempuan. "
+    "Mohon lengkapi Jenis Kelamin di file master lalu proses ulang."
+)
+JILID_PROBLEM_NAME_MISMATCH = (
+    "Nama di file master dan file penilaian berbeda jauh untuk NIM yang sama. "
+    "Kemungkinan NIM salah ketik atau tertukar dengan mahasiswa lain. "
+    "Mohon dicek manual sebelum dimasukkan ke kelas Jilid."
+)
+JILID_PROBLEM_SCORE_EMPTY = (
+    "Kolom Total Nilai di file penilaian kosong atau bukan angka, "
+    "jadi Jilid-nya belum bisa ditentukan. Mohon dicek dan dilengkapi nilainya."
+)
+JILID_PROBLEM_SCORE_OUT_OF_RANGE = (
+    "Total Nilai ({total_score:g}) di luar rentang wajar {minimum:g}-{maximum:g}, "
+    "kemungkinan salah input. Mohon dicek ulang angkanya di file penilaian."
+)
+JILID_PROBLEM_DUPLICATE_NIM = (
+    "NIM ini dipakai lebih dari satu mahasiswa berbeda di file penilaian "
+    "(nama/nilai yang tercatat beda-beda) - kemungkinan salah ketik NIM. "
+    "Sistem otomatis memakai data yang paling terakhir untuk menentukan Jilid; "
+    "mohon dicek manual siapa pemilik NIM yang benar."
+)
 
 
 def jilid_sheet_name(jilid_label: str, gender_label: str) -> str:

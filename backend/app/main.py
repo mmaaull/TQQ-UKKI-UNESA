@@ -343,15 +343,55 @@ def download_rekap_jilid(session_id: str) -> Response:
     )
 
 
+def _validate_jumlah_tentor(jumlah_tentor_laki_laki: int, jumlah_tentor_perempuan: int) -> None:
+    if jumlah_tentor_laki_laki < 0 or jumlah_tentor_perempuan < 0:
+        raise HTTPException(status_code=422, detail="Jumlah tentor tidak boleh negatif.")
+
+
+def _process_tentor_from_bytes(
+    excel_bytes: bytes,
+    filename: str,
+    jumlah_tentor_laki_laki: int,
+    jumlah_tentor_perempuan: int,
+) -> dict:
+    """Jalankan pembagian tentor dari bytes file hasil Rekap Jilid dan simpan sesinya."""
+    uploaded_file = BytesIO(excel_bytes)
+    uploaded_file.name = filename
+
+    try:
+        jilid_groups = read_jilid_recap_file(uploaded_file)
+    except TentorRequiredDataError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"File hasil Rekap Jilid tidak dapat dibaca sebagai file Excel: {exc}",
+        ) from exc
+
+    try:
+        distribution = build_tentor_distribution(
+            jilid_groups, jumlah_tentor_laki_laki, jumlah_tentor_perempuan
+        )
+    except (TentorRequiredDataError, TentorAllocationError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    result_excel_bytes = export_tentor_excel(distribution["tentor_sheets"], distribution["ringkasan"])
+    session_id = create_tentor_session(result_excel_bytes)
+    return {
+        "session_id": session_id,
+        "summary": distribution["summary"],
+        "ringkasan_tentor": dataframe_records(distribution["ringkasan"]),
+    }
+
+
 @app.post("/api/tentor/process")
 async def process_tentor_upload(
     rekap_jilid_file: UploadFile = File(...),
     jumlah_tentor_laki_laki: int = Form(...),
     jumlah_tentor_perempuan: int = Form(...),
 ) -> dict:
-    """Bagi peserta hasil Rekap Jilid ke tentor sesuai jumlah tentor yang diinput."""
-    if jumlah_tentor_laki_laki < 0 or jumlah_tentor_perempuan < 0:
-        raise HTTPException(status_code=422, detail="Jumlah tentor tidak boleh negatif.")
+    """Bagi peserta hasil Rekap Jilid ke tentor dari file yang diupload manual."""
+    _validate_jumlah_tentor(jumlah_tentor_laki_laki, jumlah_tentor_perempuan)
 
     filename = rekap_jilid_file.filename or ""
     if Path(filename).suffix.lower() not in {".xlsx", ".xls"}:
@@ -362,33 +402,32 @@ async def process_tentor_upload(
     contents = await rekap_jilid_file.read()
     if not contents:
         raise HTTPException(status_code=400, detail="rekap_jilid_file kosong.")
-    uploaded_file = BytesIO(contents)
-    uploaded_file.name = filename
 
-    try:
-        jilid_groups = read_jilid_recap_file(uploaded_file)
-    except TentorRequiredDataError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(
-            status_code=422,
-            detail=f"rekap_jilid_file tidak dapat dibaca sebagai file Excel: {exc}",
-        ) from exc
+    return _process_tentor_from_bytes(
+        contents, filename, jumlah_tentor_laki_laki, jumlah_tentor_perempuan
+    )
 
-    try:
-        distribution = build_tentor_distribution(
-            jilid_groups, jumlah_tentor_laki_laki, jumlah_tentor_perempuan
-        )
-    except (TentorRequiredDataError, TentorAllocationError) as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    excel_bytes = export_tentor_excel(distribution["tentor_sheets"], distribution["ringkasan"])
-    session_id = create_tentor_session(excel_bytes)
-    return {
-        "session_id": session_id,
-        "summary": distribution["summary"],
-        "ringkasan_tentor": dataframe_records(distribution["ringkasan"]),
-    }
+@app.post("/api/tentor/process-from-jilid/{session_id}")
+async def process_tentor_from_jilid_session(
+    session_id: str,
+    jumlah_tentor_laki_laki: int = Form(...),
+    jumlah_tentor_perempuan: int = Form(...),
+) -> dict:
+    """Bagi peserta ke tentor langsung dari session Rekap Jilid yang baru diproses,
+    tanpa perlu download lalu upload ulang filenya."""
+    _validate_jumlah_tentor(jumlah_tentor_laki_laki, jumlah_tentor_perempuan)
+
+    jilid_session = get_jilid_session(session_id)
+    if jilid_session is None:
+        raise HTTPException(status_code=404, detail="Session rekap jilid tidak ditemukan.")
+
+    return _process_tentor_from_bytes(
+        jilid_session.excel_bytes,
+        "rekap_pembagian_kelas_jilid.xlsx",
+        jumlah_tentor_laki_laki,
+        jumlah_tentor_perempuan,
+    )
 
 
 @app.get("/api/tentor/{session_id}/download")

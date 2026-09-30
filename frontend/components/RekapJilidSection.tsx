@@ -16,6 +16,8 @@ import { useId, useState } from "react";
 import { downloadRekapJilid, processRekapJilid } from "@/lib/api";
 import type { ApiRecord, ExportStatus, ProcessStatus, RekapJilidProcessResponse } from "@/types/dashboard";
 
+import { PembagianTentorSection } from "./PembagianTentorSection";
+
 function MiniUpload({
   label,
   hint,
@@ -157,6 +159,7 @@ export function RekapJilidSection() {
   }
 
   return (
+    <div className="space-y-6">
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div>
         <h2 className="text-base font-semibold text-slate-900">Rekap Pembagian Kelas Jilid</h2>
@@ -255,12 +258,19 @@ export function RekapJilidSection() {
 
       {result && (
         <div className="mt-5 space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl bg-blue-50 p-4">
               <p className="text-xs font-semibold text-blue-700">Total Peserta Dinilai</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">
                 {result.summary.total_dinilai.toLocaleString("id-ID")}
               </p>
+            </div>
+            <div className="rounded-xl bg-sky-50 p-4">
+              <p className="text-xs font-semibold text-sky-700">Otomatis Jilid 1</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">
+                {result.summary.total_otomatis_jilid1.toLocaleString("id-ID")}
+              </p>
+              <p className="mt-0.5 text-[11px] text-sky-700">Tidak ikut tes gelombang ini</p>
             </div>
             <div className="rounded-xl bg-emerald-50 p-4">
               <p className="text-xs font-semibold text-emerald-700">Berhasil Diklasifikasikan</p>
@@ -294,5 +304,15 @@ export function RekapJilidSection() {
         </div>
       )}
     </section>
+
+    <PembagianTentorSection
+      jilidSessionId={result?.session_id ?? null}
+      jilidSessionLabel={
+        result
+          ? `${result.summary.total_terklasifikasi.toLocaleString("id-ID")} peserta terklasifikasi dari proses Rekap Jilid barusan.`
+          : undefined
+      }
+    />
+    </div>
   );
 }

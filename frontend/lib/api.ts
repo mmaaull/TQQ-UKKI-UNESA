@@ -199,6 +199,34 @@ export async function processTentor(
   return response.json() as Promise<TentorProcessResponse>;
 }
 
+export async function processTentorFromJilidSession(
+  jilidSessionId: string,
+  jumlahTentorLakiLaki: number,
+  jumlahTentorPerempuan: number
+): Promise<TentorProcessResponse> {
+  const formData = new FormData();
+  formData.append("jumlah_tentor_laki_laki", String(jumlahTentorLakiLaki));
+  formData.append("jumlah_tentor_perempuan", String(jumlahTentorPerempuan));
+  const response = await fetch(`${apiUrl}/api/tentor/process-from-jilid/${jilidSessionId}`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) {
+    let message = "Proses pembagian tentor gagal. Silakan coba kembali.";
+    try {
+      const body: unknown = await response.json();
+      if (typeof body === "object" && body !== null && "detail" in body) {
+        const detail = body.detail;
+        message = typeof detail === "string" ? detail : JSON.stringify(detail);
+      }
+    } catch {
+      // Gunakan pesan default jika response error bukan JSON.
+    }
+    throw new ApiError(message, response.status);
+  }
+  return response.json() as Promise<TentorProcessResponse>;
+}
+
 export async function downloadTentor(sessionId: string): Promise<string> {
   const response = await fetch(`${apiUrl}/api/tentor/${sessionId}/download`);
   if (!response.ok) {

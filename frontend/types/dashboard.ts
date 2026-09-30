@@ -76,6 +76,7 @@ export type RekapJilidProcessResponse = {
   session_id: string;
   summary: {
     total_dinilai: number;
+    total_otomatis_jilid1: number;
     total_terklasifikasi: number;
     total_bermasalah: number;
   };

@@ -7,12 +7,13 @@ import {
   FileSpreadsheet,
   LoaderCircle,
   RotateCcw,
+  Sparkles,
   UploadCloud,
   Users,
 } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
-import { downloadTentor, processTentor } from "@/lib/api";
+import { downloadTentor, processTentor, processTentorFromJilidSession } from "@/lib/api";
 import type { ApiRecord, ExportStatus, ProcessStatus, TentorProcessResponse } from "@/types/dashboard";
 
 function RingkasanTentorTable({ rows }: { rows: ApiRecord[] }) {
@@ -48,12 +49,20 @@ function RingkasanTentorTable({ rows }: { rows: ApiRecord[] }) {
   );
 }
 
-export function PembagianTentorSection() {
+export type PembagianTentorSectionProps = {
+  /** session_id hasil Rekap Jilid yang baru diproses di halaman yang sama, kalau ada. */
+  jilidSessionId?: string | null;
+  /** Label singkat hasil rekap jilid tsb, ditampilkan di panel mode otomatis. */
+  jilidSessionLabel?: string;
+};
+
+export function PembagianTentorSection({ jilidSessionId, jilidSessionLabel }: PembagianTentorSectionProps) {
   const inputId = useId();
+  const [mode, setMode] = useState<"auto" | "manual">(jilidSessionId ? "auto" : "manual");
   const [file, setFile] = useState<File | null>(null);
   const [jumlahTentorLakiLaki, setJumlahTentorLakiLaki] = useState("");
   const [jumlahTentorPerempuan, setJumlahTentorPerempuan] = useState("");
-  const [status, setStatus] = useState<ProcessStatus>("idle");
+  const [status, setStatus] = useState<ProcessStatus>(jilidSessionId ? "ready" : "idle");
   const [downloadStatus, setDownloadStatus] = useState<ExportStatus>("idle");
   const [error, setError] = useState("");
   const [downloadMessage, setDownloadMessage] = useState("");
@@ -66,13 +75,39 @@ export function PembagianTentorSection() {
     jumlahTentorPerempuan.trim() !== "" &&
     Number(jumlahTentorLakiLaki) >= 0 &&
     Number(jumlahTentorPerempuan) >= 0;
-  const canProcess = Boolean(file) && hasValidJumlahTentor && (status === "ready" || status === "error");
+  const hasSource = mode === "auto" ? Boolean(jilidSessionId) : Boolean(file);
+  const canProcess = hasSource && hasValidJumlahTentor && (status === "ready" || status === "error");
+
+  // Begitu ada hasil Rekap Jilid baru di halaman yang sama, otomatis pindah ke mode
+  // "pakai hasil di atas" dan bersihkan hasil pembagian tentor yang lama.
+  useEffect(() => {
+    if (jilidSessionId) {
+      setMode("auto");
+      setFile(null);
+      setStatus("ready");
+      resetResultState();
+    } else if (mode === "auto") {
+      setMode("manual");
+      setStatus("idle");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jilidSessionId]);
 
   function resetResultState() {
     setResult(null);
     setError("");
     setDownloadMessage("");
     setDownloadStatus("idle");
+  }
+
+  function handleModeChange(nextMode: "auto" | "manual") {
+    setMode(nextMode);
+    resetResultState();
+    if (nextMode === "auto") {
+      setStatus(jilidSessionId ? "ready" : "idle");
+    } else {
+      setStatus(file ? "ready" : "idle");
+    }
   }
 
   function handleFileChange(nextFile: File | null) {
@@ -84,17 +119,21 @@ export function PembagianTentorSection() {
   function handleJumlahChange(setter: (value: string) => void, value: string) {
     setter(value);
     resetResultState();
-    if (file) setStatus("ready");
+    if (hasSource) setStatus("ready");
   }
 
   async function handleProcess() {
-    if (!file || !canProcess) return;
+    if (!canProcess) return;
     setStatus("processing");
     setError("");
     try {
-      setResult(
-        await processTentor(file, Number(jumlahTentorLakiLaki), Number(jumlahTentorPerempuan))
-      );
+      const jumlahL = Number(jumlahTentorLakiLaki);
+      const jumlahP = Number(jumlahTentorPerempuan);
+      const response =
+        mode === "auto" && jilidSessionId
+          ? await processTentorFromJilidSession(jilidSessionId, jumlahL, jumlahP)
+          : await processTentor(file as File, jumlahL, jumlahP);
+      setResult(response);
       setStatus("success");
     } catch (caughtError) {
       setStatus("error");
@@ -122,7 +161,8 @@ export function PembagianTentorSection() {
     setJumlahTentorLakiLaki("");
     setJumlahTentorPerempuan("");
     setInputResetKey((value) => value + 1);
-    setStatus("idle");
+    setMode(jilidSessionId ? "auto" : "manual");
+    setStatus(jilidSessionId ? "ready" : "idle");
     resetResultState();
   }
 
@@ -131,38 +171,75 @@ export function PembagianTentorSection() {
       <div>
         <h2 className="text-base font-semibold text-slate-900">Pembagian Tentor</h2>
         <p className="mt-1 text-xs leading-5 text-slate-500">
-          Upload file hasil unduhan Rekap Jilid, lalu tentukan jumlah tentor Laki-laki dan
-          Perempuan. Sistem membagi tentor ke tiap kelas Jilid secara proporsional dan
-          membagi peserta di dalamnya serata mungkin (1 tentor hanya memegang 1 kelas Jilid).
+          Tentukan jumlah tentor Laki-laki dan Perempuan. Sistem membagi tentor ke tiap kelas
+          Jilid secara proporsional dan membagi peserta di dalamnya serata mungkin (1 tentor
+          hanya memegang 1 kelas Jilid).
         </p>
       </div>
 
+      {jilidSessionId && (
+        <div className="mt-4 inline-flex flex-wrap gap-2 rounded-xl bg-slate-50 p-1.5 border border-slate-200/80">
+          <button
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              mode === "auto" ? "bg-blue-700 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
+            }`}
+            disabled={isProcessing}
+            onClick={() => handleModeChange("auto")}
+            type="button"
+          >
+            Pakai Hasil Rekap Jilid di Atas
+          </button>
+          <button
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              mode === "manual" ? "bg-blue-700 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
+            }`}
+            disabled={isProcessing}
+            onClick={() => handleModeChange("manual")}
+            type="button"
+          >
+            Upload File Lain
+          </button>
+        </div>
+      )}
+
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_auto]">
         <div className="grid gap-4">
-          <label
-            className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-5 text-center transition ${
-              isProcessing ? "cursor-not-allowed opacity-60" : "hover:border-blue-400 hover:bg-blue-50"
-            }`}
-            htmlFor={inputId}
-          >
-            <UploadCloud className="text-blue-700" size={32} />
-            <p className="mt-2 text-sm font-semibold text-slate-700">
-              {file?.name ?? "Upload file hasil Rekap Jilid"}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">Format .xlsx atau .xls</p>
-            <span className="mt-3 rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white">
-              Pilih File
-            </span>
-            <input
-              accept=".xlsx,.xls"
-              className="sr-only"
-              disabled={isProcessing}
-              id={inputId}
-              key={inputResetKey}
-              onChange={(event) => handleFileChange(event.target.files?.[0] ?? null)}
-              type="file"
-            />
-          </label>
+          {mode === "auto" ? (
+            <div className="flex min-h-32 flex-col items-center justify-center rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/60 p-5 text-center">
+              <Sparkles className="text-blue-700" size={28} />
+              <p className="mt-2 text-sm font-semibold text-slate-700">
+                Menggunakan hasil Rekap Jilid yang baru diproses
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                {jilidSessionLabel ?? "Tidak perlu download lalu upload ulang file."}
+              </p>
+            </div>
+          ) : (
+            <label
+              className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-5 text-center transition ${
+                isProcessing ? "cursor-not-allowed opacity-60" : "hover:border-blue-400 hover:bg-blue-50"
+              }`}
+              htmlFor={inputId}
+            >
+              <UploadCloud className="text-blue-700" size={32} />
+              <p className="mt-2 text-sm font-semibold text-slate-700">
+                {file?.name ?? "Upload file hasil Rekap Jilid"}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">Format .xlsx atau .xls</p>
+              <span className="mt-3 rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white">
+                Pilih File
+              </span>
+              <input
+                accept=".xlsx,.xls"
+                className="sr-only"
+                disabled={isProcessing}
+                id={inputId}
+                key={inputResetKey}
+                onChange={(event) => handleFileChange(event.target.files?.[0] ?? null)}
+                type="file"
+              />
+            </label>
+          )}
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -239,7 +316,7 @@ export function PembagianTentorSection() {
             type="button"
           >
             <RotateCcw size={14} />
-            Mulai File Baru
+            Reset
           </button>
         </div>
       </div>

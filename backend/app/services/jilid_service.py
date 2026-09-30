@@ -5,6 +5,16 @@ Kelas PAI, dan Program Studi karena file penilaian tashih tidak memiliki
 kolom jenis kelamin. Kelas Jilid dihitung ulang oleh sistem dari Total Nilai
 di file penilaian (bukan dari kolom Jilid manual bila ada), lalu hasilnya
 dipisah per Jilid (1-4) dan per jenis kelamin.
+
+File master berisi peserta dari SEMUA gelombang tes tashih sekaligus,
+sedangkan file penilaian yang diupload hanya berisi 1 gelombang. Supaya
+peserta gelombang lain (yang belum waktunya direkap) tidak ikut tertarik,
+sistem memakai Kelas PAI sebagai penanda gelombang: peserta master yang
+Kelas PAI-nya sudah muncul di file penilaian ini tapi NIM-nya sendiri tidak
+ada, dianggap "tidak ikut tes gelombang ini" dan otomatis dimasukkan ke
+Jilid 1. Peserta di Kelas PAI yang sama sekali belum tersentuh file
+penilaian ini (kemungkinan besar gelombang lain) tidak disertakan sama
+sekali dalam rekap.
 """
 
 from io import BytesIO
@@ -13,10 +23,18 @@ from typing import Any, Dict, List, Tuple
 import pandas as pd
 
 from backend.app.core.config import (
+    JILID_AUTO_ASSIGN_NOTE,
     JILID_GENDER_SHEET_LABELS,
     JILID_LABELS,
+    JILID_NAME_SIMILARITY_THRESHOLD,
     JILID_OUTPUT_COLUMN_LABELS,
     JILID_OUTPUT_COLUMNS,
+    JILID_PROBLEM_DUPLICATE_NIM,
+    JILID_PROBLEM_GENDER_UNKNOWN,
+    JILID_PROBLEM_NAME_MISMATCH,
+    JILID_PROBLEM_NIM_NOT_IN_MASTER,
+    JILID_PROBLEM_SCORE_EMPTY,
+    JILID_PROBLEM_SCORE_OUT_OF_RANGE,
     JILID_TOTAL_RANGE,
     MASTER_REQUIRED_COLUMN_LABELS,
     PENILAIAN_TASHIH_COLUMN_ALIASES,
@@ -28,6 +46,7 @@ from backend.app.services.validation import parse_score
 from backend.app.utils.helpers import (
     detect_column_mapping,
     is_blank,
+    name_similarity,
     natural_sort_kelas_key,
     normalize_gender,
     normalize_header,
@@ -164,47 +183,95 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
             "Nama": row.get("nama_nilai", ""),
             "Program Studi": row.get("prodi_nilai", ""),
             "Total Nilai": row.get("total_nilai", ""),
-            "Keterangan": "NIM duplikat di file penilaian tashih. Sistem memakai data terakhir saat menghitung jilid.",
+            "Keterangan": JILID_PROBLEM_DUPLICATE_NIM,
         })
 
-    valid_mask: List[bool] = []
-    jilid_values: List[str] = []
+    classified_rows: List[Dict[str, Any]] = []
 
     for _, row in merged.iterrows():
         reasons: List[str] = []
         master_found = not is_blank(row.get("kode_kelas_pai", ""))
+        nama_nilai = row.get("nama_nilai", "")
         if not master_found:
-            reasons.append("NIM tidak ditemukan di file master")
+            reasons.append(JILID_PROBLEM_NIM_NOT_IN_MASTER)
         elif row.get("jenis_kelamin") not in ("L", "P"):
-            reasons.append("Jenis kelamin tidak dikenali di file master")
+            reasons.append(JILID_PROBLEM_GENDER_UNKNOWN)
+        elif (
+            not is_blank(nama_nilai)
+            and name_similarity(row.get("nama", ""), nama_nilai) < JILID_NAME_SIMILARITY_THRESHOLD
+        ):
+            reasons.append(JILID_PROBLEM_NAME_MISMATCH)
 
         total_score = row.get("total_score")
         if total_score is None:
-            reasons.append("Total Nilai kosong atau tidak valid")
+            reasons.append(JILID_PROBLEM_SCORE_EMPTY)
         elif not (JILID_TOTAL_RANGE["min"] <= total_score <= JILID_TOTAL_RANGE["max"]):
             reasons.append(
-                f"Total Nilai di luar rentang {JILID_TOTAL_RANGE['min']:g}-{JILID_TOTAL_RANGE['max']:g} ({total_score:g})"
+                JILID_PROBLEM_SCORE_OUT_OF_RANGE.format(
+                    total_score=total_score,
+                    minimum=JILID_TOTAL_RANGE["min"],
+                    maximum=JILID_TOTAL_RANGE["max"],
+                )
             )
 
         if reasons:
-            valid_mask.append(False)
-            jilid_values.append("")
             prodi_display = row.get("prodi") if master_found and not is_blank(row.get("prodi", "")) else row.get("prodi_nilai", "")
             problems.append({
                 "NIM": row.get("nim", ""),
-                "Nama": row.get("nama") if master_found and not is_blank(row.get("nama", "")) else row.get("nama_nilai", ""),
+                "Nama": row.get("nama") if master_found and not is_blank(row.get("nama", "")) else nama_nilai,
                 "Program Studi": prodi_display,
                 "Total Nilai": row.get("total_nilai", ""),
                 "Keterangan": "; ".join(reasons),
             })
         else:
-            valid_mask.append(True)
-            jilid_values.append(compute_jilid(total_score))
+            classified_rows.append({
+                "nama": row.get("nama", ""),
+                "jenis_kelamin": row.get("jenis_kelamin", ""),
+                "nim": row.get("nim", ""),
+                "kode_kelas_pai": row.get("kode_kelas_pai", ""),
+                "prodi": row.get("prodi", ""),
+                "keterangan": "",
+                "_jilid": compute_jilid(total_score),
+            })
 
-    merged["_valid"] = valid_mask
-    merged["_jilid"] = jilid_values
+    # Peserta master yang Kelas PAI-nya sudah "kesentuh" gelombang ini (ada
+    # peserta sekelas yang ikut tes) tapi NIM-nya sendiri tidak muncul di file
+    # penilaian dianggap tidak ikut tes gelombang ini dan otomatis Jilid 1.
+    # Peserta di Kelas PAI yang sama sekali belum tersentuh file penilaian ini
+    # (kemungkinan besar gelombang lain) tidak disertakan sama sekali.
+    tested_nim = set(penilaian_unique["nim"])
+    tested_classes = set(master_df.loc[master_df["nim"].isin(tested_nim), "kode_kelas_pai"])
+    untested_mask = (
+        master_df["nim"].ne("")
+        & ~master_df["nim"].isin(tested_nim)
+        & master_df["kode_kelas_pai"].isin(tested_classes)
+    )
+    total_otomatis_jilid1 = 0
+    for _, row in master_df.loc[untested_mask].iterrows():
+        if row.get("jenis_kelamin") not in ("L", "P"):
+            problems.append({
+                "NIM": row.get("nim", ""),
+                "Nama": row.get("nama", ""),
+                "Program Studi": row.get("prodi", ""),
+                "Total Nilai": "",
+                "Keterangan": JILID_PROBLEM_GENDER_UNKNOWN,
+            })
+            continue
+        classified_rows.append({
+            "nama": row.get("nama", ""),
+            "jenis_kelamin": row.get("jenis_kelamin", ""),
+            "nim": row.get("nim", ""),
+            "kode_kelas_pai": row.get("kode_kelas_pai", ""),
+            "prodi": row.get("prodi", ""),
+            "keterangan": JILID_AUTO_ASSIGN_NOTE,
+            "_jilid": "Jilid 1",
+        })
+        total_otomatis_jilid1 += 1
 
-    valid_rows = merged[merged["_valid"]].copy()
+    valid_rows = pd.DataFrame(
+        classified_rows,
+        columns=["nama", "jenis_kelamin", "nim", "kode_kelas_pai", "prodi", "keterangan", "_jilid"],
+    )
 
     groups: Dict[Tuple[str, str], pd.DataFrame] = {}
     ringkasan_rows: List[Dict[str, Any]] = []
@@ -232,6 +299,7 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
 
     summary = {
         "total_dinilai": int(len(penilaian)),
+        "total_otomatis_jilid1": total_otomatis_jilid1,
         "total_terklasifikasi": int(len(valid_rows)),
         "total_bermasalah": int(len(data_bermasalah)),
     }

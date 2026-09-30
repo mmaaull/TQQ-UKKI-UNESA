@@ -15,7 +15,7 @@ export default function RekapJilidPage() {
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base sm:leading-7">
             Upload data master dan hasil tes tashih untuk membagi peserta ke kelas Jilid secara
-            otomatis.
+            otomatis, lalu lanjutkan langsung ke pembagian tentor per kelas Jilid.
           </p>
         </div>
       </section>
