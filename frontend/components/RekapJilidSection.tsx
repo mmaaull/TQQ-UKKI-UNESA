@@ -14,8 +14,9 @@ import {
 import { useId, useState } from "react";
 
 import { downloadRekapJilid, processRekapJilid } from "@/lib/api";
-import type { ApiRecord, ExportStatus, ProcessStatus, RekapJilidProcessResponse } from "@/types/dashboard";
+import type { ExportStatus, ProcessStatus, RekapJilidProcessResponse } from "@/types/dashboard";
 
+import { PaginatedTable } from "./PaginatedTable";
 import { PembagianTentorSection } from "./PembagianTentorSection";
 
 function MiniUpload({
@@ -54,39 +55,6 @@ function MiniUpload({
         type="file"
       />
     </label>
-  );
-}
-
-function RingkasanTable({ rows }: { rows: ApiRecord[] }) {
-  if (rows.length === 0) {
-    return <p className="px-4 py-6 text-center text-sm text-slate-500">Tidak ada data untuk ditampilkan.</p>;
-  }
-  const columns = Object.keys(rows[0]);
-  return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200">
-      <table className="w-full border-collapse text-left text-xs">
-        <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-          <tr>
-            {columns.map((column) => (
-              <th className="whitespace-nowrap border-b border-slate-200 px-4 py-3" key={column}>
-                {column}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
-          {rows.map((row, index) => (
-            <tr className="transition-colors hover:bg-blue-50/50" key={index}>
-              {columns.map((column) => (
-                <td className="px-4 py-3" key={column}>
-                  {row[column] === null || row[column] === "" ? "-" : String(row[column])}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }
 
@@ -288,7 +256,7 @@ export function RekapJilidSection() {
 
           <div>
             <h3 className="mb-2 text-sm font-bold text-slate-800">Ringkasan Jumlah per Jilid</h3>
-            <RingkasanTable rows={result.ringkasan_jilid} />
+            <PaginatedTable rows={result.ringkasan_jilid} />
           </div>
 
           {result.summary.total_bermasalah > 0 && (
@@ -298,7 +266,7 @@ export function RekapJilidSection() {
                 Data ini dikeluarkan dari sheet Jilid dan bisa dicek manual pada sheet &quot;Data Bermasalah&quot;
                 di file hasil unduhan.
               </p>
-              <RingkasanTable rows={result.data_bermasalah} />
+              <PaginatedTable rows={result.data_bermasalah} />
             </div>
           )}
         </div>

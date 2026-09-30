@@ -14,40 +14,9 @@ import {
 import { useEffect, useId, useState } from "react";
 
 import { downloadTentor, processTentor, processTentorFromJilidSession } from "@/lib/api";
-import type { ApiRecord, ExportStatus, ProcessStatus, TentorProcessResponse } from "@/types/dashboard";
+import type { ExportStatus, ProcessStatus, TentorProcessResponse } from "@/types/dashboard";
 
-function RingkasanTentorTable({ rows }: { rows: ApiRecord[] }) {
-  if (rows.length === 0) {
-    return <p className="px-4 py-6 text-center text-sm text-slate-500">Tidak ada data untuk ditampilkan.</p>;
-  }
-  const columns = Object.keys(rows[0]);
-  return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200">
-      <table className="w-full border-collapse text-left text-xs">
-        <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-          <tr>
-            {columns.map((column) => (
-              <th className="whitespace-nowrap border-b border-slate-200 px-4 py-3" key={column}>
-                {column}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
-          {rows.map((row, index) => (
-            <tr className="transition-colors hover:bg-blue-50/50" key={index}>
-              {columns.map((column) => (
-                <td className="px-4 py-3" key={column}>
-                  {row[column] === null || row[column] === "" ? "-" : String(row[column])}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+import { PaginatedTable } from "./PaginatedTable";
 
 export type PembagianTentorSectionProps = {
   /** session_id hasil Rekap Jilid yang baru diproses di halaman yang sama, kalau ada. */
@@ -372,7 +341,7 @@ export function PembagianTentorSection({ jilidSessionId, jilidSessionLabel }: Pe
 
           <div>
             <h3 className="mb-2 text-sm font-bold text-slate-800">Ringkasan Pembagian Tentor</h3>
-            <RingkasanTentorTable rows={result.ringkasan_tentor} />
+            <PaginatedTable rows={result.ringkasan_tentor} />
           </div>
         </div>
       )}
