@@ -174,6 +174,25 @@ JILID_PROBLEM_DUPLICATE_NIM = (
     "mohon dicek manual siapa pemilik NIM yang benar."
 )
 
+# Label kategori singkat (kolom "Jenis Masalah") untuk breakdown jumlah
+# masalah per jenis di Rekap Jilid - biar panitia bisa lihat rinciannya
+# tanpa harus baca satu-satu kalimat "Keterangan" yang panjang.
+JILID_PROBLEM_TYPE_DUPLICATE_NIM = "NIM Duplikat di File Penilaian"
+JILID_PROBLEM_TYPE_NIM_NOT_IN_MASTER = "NIM Tidak Ditemukan di File Master"
+JILID_PROBLEM_TYPE_GENDER_UNKNOWN = "Jenis Kelamin Tidak Dikenali"
+JILID_PROBLEM_TYPE_NAME_MISMATCH = "Nama Berbeda (Master vs Penilaian)"
+JILID_PROBLEM_TYPE_SCORE_EMPTY = "Total Nilai Kosong/Tidak Valid"
+JILID_PROBLEM_TYPE_SCORE_OUT_OF_RANGE = "Total Nilai di Luar Rentang"
+
+JILID_PROBLEM_TYPE_ORDER = [
+    JILID_PROBLEM_TYPE_DUPLICATE_NIM,
+    JILID_PROBLEM_TYPE_NIM_NOT_IN_MASTER,
+    JILID_PROBLEM_TYPE_GENDER_UNKNOWN,
+    JILID_PROBLEM_TYPE_NAME_MISMATCH,
+    JILID_PROBLEM_TYPE_SCORE_EMPTY,
+    JILID_PROBLEM_TYPE_SCORE_OUT_OF_RANGE,
+]
+
 
 def jilid_sheet_name(jilid_label: str, gender_label: str) -> str:
     """Nama sheet Excel untuk kombinasi Jilid + Jenis Kelamin pada hasil Rekap Jilid.

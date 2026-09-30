@@ -315,7 +315,9 @@ async def process_rekap_jilid_upload(
 
     try:
         recap = build_jilid_recap(master_df, penilaian_df)
-        excel_bytes = export_jilid_excel(recap["groups"], recap["data_bermasalah"])
+        excel_bytes = export_jilid_excel(
+            recap["groups"], recap["data_bermasalah"], recap["masalah_ringkasan"]
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Proses rekap jilid gagal.") from exc
 
@@ -324,6 +326,7 @@ async def process_rekap_jilid_upload(
         "session_id": session_id,
         "summary": recap["summary"],
         "ringkasan_jilid": dataframe_records(recap["ringkasan"]),
+        "ringkasan_masalah": dataframe_records(recap["masalah_ringkasan"]),
         "data_bermasalah": dataframe_records(recap["data_bermasalah"]),
     }
 

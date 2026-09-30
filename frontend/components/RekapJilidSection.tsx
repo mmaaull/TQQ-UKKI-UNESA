@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Download,
   FileSpreadsheet,
+  Info,
   LoaderCircle,
   RotateCcw,
   UploadCloud,
@@ -228,20 +229,38 @@ export function RekapJilidSection() {
         <div className="mt-5 space-y-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl bg-blue-50 p-4">
-              <p className="text-xs font-semibold text-blue-700">Total Peserta Dinilai</p>
+              <p
+                className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700"
+                title="Jumlah baris di file penilaian tashih yang kamu upload (file gelombang ini saja)."
+              >
+                Total Peserta Dinilai
+                <Info size={12} className="shrink-0 opacity-70" />
+              </p>
               <p className="mt-1 text-2xl font-bold text-slate-900">
                 {result.summary.total_dinilai.toLocaleString("id-ID")}
               </p>
             </div>
             <div className="rounded-xl bg-sky-50 p-4">
-              <p className="text-xs font-semibold text-sky-700">Otomatis Jilid 1</p>
+              <p
+                className="inline-flex items-center gap-1 text-xs font-semibold text-sky-700"
+                title="Peserta di file master yang kelasnya sudah kesentuh gelombang ini, tapi tidak ikut tes. Mereka TIDAK termasuk di 'Total Peserta Dinilai' di atas — angka ini murni tambahan, bukan pengurang."
+              >
+                Otomatis Jilid 1
+                <Info size={12} className="shrink-0 opacity-70" />
+              </p>
               <p className="mt-1 text-2xl font-bold text-slate-900">
                 {result.summary.total_otomatis_jilid1.toLocaleString("id-ID")}
               </p>
-              <p className="mt-0.5 text-[11px] text-sky-700">Tidak ikut tes gelombang ini</p>
+              <p className="mt-0.5 text-[11px] text-sky-700">Tidak ikut tes, di luar Total Dinilai</p>
             </div>
             <div className="rounded-xl bg-emerald-50 p-4">
-              <p className="text-xs font-semibold text-emerald-700">Berhasil Diklasifikasikan</p>
+              <p
+                className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"
+                title="Peserta valid dari file penilaian + peserta Otomatis Jilid 1. Karena sumbernya beda file, angka ini bisa lebih besar dari 'Total Peserta Dinilai'."
+              >
+                Berhasil Diklasifikasikan
+                <Info size={12} className="shrink-0 opacity-70" />
+              </p>
               <p className="mt-1 text-2xl font-bold text-slate-900">
                 {result.summary.total_terklasifikasi.toLocaleString("id-ID")}
               </p>
@@ -254,10 +273,31 @@ export function RekapJilidSection() {
             </div>
           </div>
 
+          <p className="rounded-xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
+            <span className="font-semibold text-slate-600">Catatan:</span> &quot;Otomatis Jilid 1&quot; adalah
+            peserta di file master yang kelasnya sudah kesentuh gelombang ini tapi tidak ikut tes tashih —
+            mereka tidak pernah ada di file penilaian, jadi jangan dikurangkan dari &quot;Total Peserta
+            Dinilai&quot;. &quot;Berhasil Diklasifikasikan&quot; = peserta valid dari file penilaian{" "}
+            <span className="font-semibold">ditambah</span> peserta Otomatis Jilid 1 di atas.
+          </p>
+
           <div>
             <h3 className="mb-2 text-sm font-bold text-slate-800">Ringkasan Jumlah per Jilid</h3>
             <PaginatedTable rows={result.ringkasan_jilid} />
           </div>
+
+          {result.summary.total_bermasalah > 0 && (
+            <div>
+              <h3 className="mb-2 text-sm font-bold text-slate-800">
+                Rincian Data Bermasalah per Jenis
+              </h3>
+              <p className="mb-2 text-xs text-slate-500">
+                Ini rincian dari {result.summary.total_bermasalah.toLocaleString("id-ID")} baris Data
+                Bermasalah di atas, dikelompokkan per jenis masalahnya.
+              </p>
+              <PaginatedTable rows={result.ringkasan_masalah} />
+            </div>
+          )}
 
           {result.summary.total_bermasalah > 0 && (
             <div>

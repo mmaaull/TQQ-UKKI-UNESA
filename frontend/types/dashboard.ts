@@ -81,6 +81,7 @@ export type RekapJilidProcessResponse = {
     total_bermasalah: number;
   };
   ringkasan_jilid: ApiRecord[];
+  ringkasan_masalah: ApiRecord[];
   data_bermasalah: ApiRecord[];
 };
 

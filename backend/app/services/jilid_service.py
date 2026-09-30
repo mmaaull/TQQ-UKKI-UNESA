@@ -35,6 +35,13 @@ from backend.app.core.config import (
     JILID_PROBLEM_NIM_NOT_IN_MASTER,
     JILID_PROBLEM_SCORE_EMPTY,
     JILID_PROBLEM_SCORE_OUT_OF_RANGE,
+    JILID_PROBLEM_TYPE_DUPLICATE_NIM,
+    JILID_PROBLEM_TYPE_GENDER_UNKNOWN,
+    JILID_PROBLEM_TYPE_NAME_MISMATCH,
+    JILID_PROBLEM_TYPE_NIM_NOT_IN_MASTER,
+    JILID_PROBLEM_TYPE_ORDER,
+    JILID_PROBLEM_TYPE_SCORE_EMPTY,
+    JILID_PROBLEM_TYPE_SCORE_OUT_OF_RANGE,
     JILID_TOTAL_RANGE,
     MASTER_REQUIRED_COLUMN_LABELS,
     PENILAIAN_TASHIH_COLUMN_ALIASES,
@@ -182,6 +189,7 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
             "NIM": row.get("nim", ""),
             "Nama": row.get("nama_nilai", ""),
             "Program Studi": row.get("prodi_nilai", ""),
+            "Jenis Masalah": JILID_PROBLEM_TYPE_DUPLICATE_NIM,
             "Total Nilai": row.get("total_nilai", ""),
             "Keterangan": JILID_PROBLEM_DUPLICATE_NIM,
         })
@@ -190,21 +198,26 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
 
     for _, row in merged.iterrows():
         reasons: List[str] = []
+        problem_type = ""
         master_found = not is_blank(row.get("kode_kelas_pai", ""))
         nama_nilai = row.get("nama_nilai", "")
         if not master_found:
             reasons.append(JILID_PROBLEM_NIM_NOT_IN_MASTER)
+            problem_type = JILID_PROBLEM_TYPE_NIM_NOT_IN_MASTER
         elif row.get("jenis_kelamin") not in ("L", "P"):
             reasons.append(JILID_PROBLEM_GENDER_UNKNOWN)
+            problem_type = JILID_PROBLEM_TYPE_GENDER_UNKNOWN
         elif (
             not is_blank(nama_nilai)
             and name_similarity(row.get("nama", ""), nama_nilai) < JILID_NAME_SIMILARITY_THRESHOLD
         ):
             reasons.append(JILID_PROBLEM_NAME_MISMATCH)
+            problem_type = JILID_PROBLEM_TYPE_NAME_MISMATCH
 
         total_score = row.get("total_score")
         if total_score is None:
             reasons.append(JILID_PROBLEM_SCORE_EMPTY)
+            problem_type = problem_type or JILID_PROBLEM_TYPE_SCORE_EMPTY
         elif not (JILID_TOTAL_RANGE["min"] <= total_score <= JILID_TOTAL_RANGE["max"]):
             reasons.append(
                 JILID_PROBLEM_SCORE_OUT_OF_RANGE.format(
@@ -213,6 +226,7 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
                     maximum=JILID_TOTAL_RANGE["max"],
                 )
             )
+            problem_type = problem_type or JILID_PROBLEM_TYPE_SCORE_OUT_OF_RANGE
 
         if reasons:
             prodi_display = row.get("prodi") if master_found and not is_blank(row.get("prodi", "")) else row.get("prodi_nilai", "")
@@ -220,6 +234,7 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
                 "NIM": row.get("nim", ""),
                 "Nama": row.get("nama") if master_found and not is_blank(row.get("nama", "")) else nama_nilai,
                 "Program Studi": prodi_display,
+                "Jenis Masalah": problem_type,
                 "Total Nilai": row.get("total_nilai", ""),
                 "Keterangan": "; ".join(reasons),
             })
@@ -253,6 +268,7 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
                 "NIM": row.get("nim", ""),
                 "Nama": row.get("nama", ""),
                 "Program Studi": row.get("prodi", ""),
+                "Jenis Masalah": JILID_PROBLEM_TYPE_GENDER_UNKNOWN,
                 "Total Nilai": "",
                 "Keterangan": JILID_PROBLEM_GENDER_UNKNOWN,
             })
@@ -295,7 +311,22 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
             })
 
     ringkasan = pd.DataFrame(ringkasan_rows)
-    data_bermasalah = pd.DataFrame(problems, columns=["NIM", "Nama", "Program Studi", "Total Nilai", "Keterangan"])
+    data_bermasalah = pd.DataFrame(
+        problems,
+        columns=["NIM", "Nama", "Program Studi", "Jenis Masalah", "Total Nilai", "Keterangan"],
+    )
+
+    if data_bermasalah.empty:
+        masalah_ringkasan = pd.DataFrame(columns=["Jenis Masalah", "Jumlah"])
+    else:
+        masalah_ringkasan = data_bermasalah["Jenis Masalah"].value_counts().reset_index()
+        masalah_ringkasan.columns = ["Jenis Masalah", "Jumlah"]
+        masalah_ringkasan["_urutan"] = masalah_ringkasan["Jenis Masalah"].apply(
+            lambda value: JILID_PROBLEM_TYPE_ORDER.index(value) if value in JILID_PROBLEM_TYPE_ORDER else 999
+        )
+        masalah_ringkasan = masalah_ringkasan.sort_values(
+            by=["_urutan", "Jenis Masalah"], ascending=True
+        ).drop(columns=["_urutan"])
 
     summary = {
         "total_dinilai": int(len(penilaian)),
@@ -308,11 +339,16 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
         "groups": groups,
         "ringkasan": ringkasan,
         "data_bermasalah": data_bermasalah,
+        "masalah_ringkasan": masalah_ringkasan,
         "summary": summary,
     }
 
 
-def export_jilid_excel(groups: Dict[Tuple[str, str], pd.DataFrame], data_bermasalah: pd.DataFrame) -> bytes:
+def export_jilid_excel(
+    groups: Dict[Tuple[str, str], pd.DataFrame],
+    data_bermasalah: pd.DataFrame,
+    masalah_ringkasan: pd.DataFrame | None = None,
+) -> bytes:
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         for jilid_label in JILID_LABELS:
@@ -323,5 +359,7 @@ def export_jilid_excel(groups: Dict[Tuple[str, str], pd.DataFrame], data_bermasa
                 sheet_name = jilid_sheet_name(jilid_label, gender_label)
                 labeled = group.rename(columns=JILID_OUTPUT_COLUMN_LABELS)
                 labeled.to_excel(writer, sheet_name=sheet_name, index=False)
+        if masalah_ringkasan is not None:
+            masalah_ringkasan.to_excel(writer, sheet_name="Ringkasan Masalah", index=False)
         data_bermasalah.to_excel(writer, sheet_name="Data Bermasalah", index=False)
     return output.getvalue()
