@@ -17,6 +17,8 @@ import { useId, useState } from "react";
 import { downloadRekapJilid, processRekapJilid } from "@/lib/api";
 import type { ExportStatus, ProcessStatus, RekapJilidProcessResponse } from "@/types/dashboard";
 
+import { JilidOtomatisTable } from "./JilidOtomatisTable";
+import { JilidProblemTable } from "./JilidProblemTable";
 import { PaginatedTable } from "./PaginatedTable";
 import { PembagianTentorSection } from "./PembagianTentorSection";
 
@@ -286,6 +288,18 @@ export function RekapJilidSection() {
             <PaginatedTable rows={result.ringkasan_jilid} />
           </div>
 
+          {result.data_otomatis_jilid1 && result.data_otomatis_jilid1.length > 0 && (
+            <div>
+              <h3 className="mb-2 text-sm font-bold text-slate-800">
+                Data Peserta Otomatis Jilid 1
+              </h3>
+              <p className="mb-2 text-xs text-slate-500">
+                Daftar peserta yang otomatis dimasukkan ke Jilid 1 (karena tidak ikut tes tashih gelombang ini atau Total Nilai kosong).
+              </p>
+              <JilidOtomatisTable rows={result.data_otomatis_jilid1} />
+            </div>
+          )}
+
           {result.summary.total_bermasalah > 0 && (
             <div>
               <h3 className="mb-2 text-sm font-bold text-slate-800">
@@ -306,7 +320,7 @@ export function RekapJilidSection() {
                 Data ini dikeluarkan dari sheet Jilid dan bisa dicek manual pada sheet &quot;Data Bermasalah&quot;
                 di file hasil unduhan.
               </p>
-              <PaginatedTable rows={result.data_bermasalah} />
+              <JilidProblemTable rows={result.data_bermasalah} />
             </div>
           )}
         </div>

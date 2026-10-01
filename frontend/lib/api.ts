@@ -150,15 +150,22 @@ export async function processRekapJilid(masterFile: File, penilaianFile: File): 
   formData.append("penilaian_file", penilaianFile);
   const response = await fetch(`${apiUrl}/api/rekap-jilid/process`, { method: "POST", body: formData });
   if (!response.ok) {
-    let message = "Proses rekap jilid gagal. Silakan coba kembali.";
+    let message = `Proses rekap jilid gagal (${response.status}). Silakan coba kembali.`;
     try {
       const body: unknown = await response.json();
       if (typeof body === "object" && body !== null && "detail" in body) {
-        const detail = body.detail;
+        const detail = (body as { detail: unknown }).detail;
         message = typeof detail === "string" ? detail : JSON.stringify(detail);
       }
     } catch {
-      // Gunakan pesan default jika response error bukan JSON.
+      try {
+        const text = await response.text();
+        if (text && text.trim().length > 0) {
+          message = text.length > 200 ? `${text.slice(0, 200)}...` : text;
+        }
+      } catch {
+        // Gunakan pesan default jika gagal membaca response
+      }
     }
     throw new ApiError(message, response.status);
   }

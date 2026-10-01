@@ -83,6 +83,7 @@ export type RekapJilidProcessResponse = {
   ringkasan_jilid: ApiRecord[];
   ringkasan_masalah: ApiRecord[];
   data_bermasalah: ApiRecord[];
+  data_otomatis_jilid1: ApiRecord[];
 };
 
 export type TentorProcessResponse = {
