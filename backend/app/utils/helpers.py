@@ -97,6 +97,8 @@ def name_similarity(name_a: Any, name_b: Any) -> float:
     b = normalize_name_for_compare(name_b)
     if not a or not b:
         return 0.0
+    if a == b:
+        return 1.0
     return SequenceMatcher(None, a, b).ratio()
 
 

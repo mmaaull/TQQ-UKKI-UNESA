@@ -1,5 +1,6 @@
 """Entry point FastAPI dasar untuk backend TQQ."""
 
+import asyncio
 from io import BytesIO
 from pathlib import Path
 from typing import Callable
@@ -267,7 +268,7 @@ async def read_master_upload(upload: UploadFile) -> pd.DataFrame:
     uploaded_file = BytesIO(contents)
     uploaded_file.name = filename
     try:
-        dataframe = read_master_file(uploaded_file)
+        dataframe = await asyncio.to_thread(read_master_file, uploaded_file)
     except MasterRequiredColumnError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
@@ -291,7 +292,7 @@ async def read_penilaian_tashih_upload(upload: UploadFile) -> pd.DataFrame:
     uploaded_file = BytesIO(contents)
     uploaded_file.name = filename
     try:
-        dataframe = read_penilaian_tashih_file(uploaded_file)
+        dataframe = await asyncio.to_thread(read_penilaian_tashih_file, uploaded_file)
     except PenilaianRequiredColumnError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
@@ -314,12 +315,18 @@ async def process_rekap_jilid_upload(
     penilaian_df = await read_penilaian_tashih_upload(penilaian_file)
 
     try:
-        recap = build_jilid_recap(master_df, penilaian_df)
-        excel_bytes = export_jilid_excel(
-            recap["groups"], recap["data_bermasalah"], recap["masalah_ringkasan"]
+        recap = await asyncio.to_thread(build_jilid_recap, master_df, penilaian_df)
+        excel_bytes = await asyncio.to_thread(
+            export_jilid_excel,
+            recap["groups"],
+            recap["data_bermasalah"],
+            recap["masalah_ringkasan"],
+            recap["data_otomatis_jilid1"],
         )
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Proses rekap jilid gagal.") from exc
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Proses rekap jilid gagal: {exc}") from exc
 
     session_id = create_jilid_session(excel_bytes)
     return {
@@ -328,6 +335,7 @@ async def process_rekap_jilid_upload(
         "ringkasan_jilid": dataframe_records(recap["ringkasan"]),
         "ringkasan_masalah": dataframe_records(recap["masalah_ringkasan"]),
         "data_bermasalah": dataframe_records(recap["data_bermasalah"]),
+        "data_otomatis_jilid1": dataframe_records(recap["data_otomatis_jilid1"]),
     }
 
 

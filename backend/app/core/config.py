@@ -139,12 +139,17 @@ JILID_OUTPUT_COLUMN_LABELS = {
 }
 
 JILID_AUTO_ASSIGN_NOTE = "Otomatis Jilid 1 - tidak ikut tes tashih gelombang ini"
+JILID_EMPTY_SCORE_NOTE = "Otomatis Jilid 1 - Total Nilai kosong atau bukan angka"
 
 JILID_NAME_SIMILARITY_THRESHOLD = 0.88
 
 # Kalimat "Keterangan" di tabel Data Bermasalah Rekap Jilid. Ditulis agar
 # panitia (non-teknis) langsung paham apa masalahnya, kenapa itu masalah,
 # dan apa yang perlu dilakukan.
+# Masalah yang ditampilkan hanya ketidaksesuaian antara file nilai dan file master:
+# 1. NIM di file nilai tidak ditemukan di file master
+# 2. Nama berbeda jauh antara file master dan file nilai (NIM sama)
+# 3. Jenis Kelamin di file master tidak dikenali (L/P)
 JILID_PROBLEM_NIM_NOT_IN_MASTER = (
     "NIM ini ada nilainya di file penilaian, tapi tidak ditemukan di file master. "
     "Kemungkinan NIM salah ketik, atau mahasiswa ini memang belum terdaftar di file master."
@@ -159,37 +164,22 @@ JILID_PROBLEM_NAME_MISMATCH = (
     "Kemungkinan NIM salah ketik atau tertukar dengan mahasiswa lain. "
     "Mohon dicek manual sebelum dimasukkan ke kelas Jilid."
 )
-JILID_PROBLEM_SCORE_EMPTY = (
-    "Kolom Total Nilai di file penilaian kosong atau bukan angka, "
-    "jadi Jilid-nya belum bisa ditentukan. Mohon dicek dan dilengkapi nilainya."
-)
 JILID_PROBLEM_SCORE_OUT_OF_RANGE = (
     "Total Nilai ({total_score:g}) di luar rentang wajar {minimum:g}-{maximum:g}, "
     "kemungkinan salah input. Mohon dicek ulang angkanya di file penilaian."
 )
-JILID_PROBLEM_DUPLICATE_NIM = (
-    "NIM ini dipakai lebih dari satu mahasiswa berbeda di file penilaian "
-    "(nama/nilai yang tercatat beda-beda) - kemungkinan salah ketik NIM. "
-    "Sistem otomatis memakai data yang paling terakhir untuk menentukan Jilid; "
-    "mohon dicek manual siapa pemilik NIM yang benar."
-)
 
 # Label kategori singkat (kolom "Jenis Masalah") untuk breakdown jumlah
-# masalah per jenis di Rekap Jilid - biar panitia bisa lihat rinciannya
-# tanpa harus baca satu-satu kalimat "Keterangan" yang panjang.
-JILID_PROBLEM_TYPE_DUPLICATE_NIM = "NIM Duplikat di File Penilaian"
+# masalah per jenis di Rekap Jilid.
 JILID_PROBLEM_TYPE_NIM_NOT_IN_MASTER = "NIM Tidak Ditemukan di File Master"
 JILID_PROBLEM_TYPE_GENDER_UNKNOWN = "Jenis Kelamin Tidak Dikenali"
 JILID_PROBLEM_TYPE_NAME_MISMATCH = "Nama Berbeda (Master vs Penilaian)"
-JILID_PROBLEM_TYPE_SCORE_EMPTY = "Total Nilai Kosong/Tidak Valid"
 JILID_PROBLEM_TYPE_SCORE_OUT_OF_RANGE = "Total Nilai di Luar Rentang"
 
 JILID_PROBLEM_TYPE_ORDER = [
-    JILID_PROBLEM_TYPE_DUPLICATE_NIM,
     JILID_PROBLEM_TYPE_NIM_NOT_IN_MASTER,
     JILID_PROBLEM_TYPE_GENDER_UNKNOWN,
     JILID_PROBLEM_TYPE_NAME_MISMATCH,
-    JILID_PROBLEM_TYPE_SCORE_EMPTY,
     JILID_PROBLEM_TYPE_SCORE_OUT_OF_RANGE,
 ]
 

@@ -17,6 +17,8 @@ penilaian ini (kemungkinan besar gelombang lain) tidak disertakan sama
 sekali dalam rekap.
 """
 
+from collections import defaultdict
+from difflib import SequenceMatcher
 from io import BytesIO
 from typing import Any, Dict, List, Tuple
 
@@ -24,23 +26,20 @@ import pandas as pd
 
 from backend.app.core.config import (
     JILID_AUTO_ASSIGN_NOTE,
+    JILID_EMPTY_SCORE_NOTE,
     JILID_GENDER_SHEET_LABELS,
     JILID_LABELS,
     JILID_NAME_SIMILARITY_THRESHOLD,
     JILID_OUTPUT_COLUMN_LABELS,
     JILID_OUTPUT_COLUMNS,
-    JILID_PROBLEM_DUPLICATE_NIM,
     JILID_PROBLEM_GENDER_UNKNOWN,
     JILID_PROBLEM_NAME_MISMATCH,
     JILID_PROBLEM_NIM_NOT_IN_MASTER,
-    JILID_PROBLEM_SCORE_EMPTY,
     JILID_PROBLEM_SCORE_OUT_OF_RANGE,
-    JILID_PROBLEM_TYPE_DUPLICATE_NIM,
     JILID_PROBLEM_TYPE_GENDER_UNKNOWN,
     JILID_PROBLEM_TYPE_NAME_MISMATCH,
     JILID_PROBLEM_TYPE_NIM_NOT_IN_MASTER,
     JILID_PROBLEM_TYPE_ORDER,
-    JILID_PROBLEM_TYPE_SCORE_EMPTY,
     JILID_PROBLEM_TYPE_SCORE_OUT_OF_RANGE,
     JILID_TOTAL_RANGE,
     MASTER_REQUIRED_COLUMN_LABELS,
@@ -57,6 +56,7 @@ from backend.app.utils.helpers import (
     natural_sort_kelas_key,
     normalize_gender,
     normalize_header,
+    normalize_name_for_compare,
     normalize_nim,
     normalize_text,
     read_all_sheets,
@@ -172,81 +172,177 @@ def compute_jilid(total: float) -> str:
     return "Jilid 4"
 
 
+def _resolve_nim_by_name(penilaian: pd.DataFrame, master_df: pd.DataFrame) -> pd.DataFrame:
+    """Koreksi NIM baris-baris yang duplikat di file nilai menggunakan nama dari master.
+
+    Untuk setiap baris yang NIM-nya muncul lebih dari sekali, dicari padanan
+    nama di file master (exact dulu, lalu similarity). Jika ketemu, NIM di baris
+    tersebut diganti dengan NIM yang benar dari master agar merge selanjutnya
+    bisa menemukan data mahasiswa yang tepat.
+    """
+    master_norm_to_nim: Dict[str, str] = {}
+    master_by_first_char: Dict[str, List[Tuple[str, str]]] = defaultdict(list)
+
+    for _, mrow in master_df.iterrows():
+        nama = str(mrow.get("nama", ""))
+        nim = str(mrow.get("nim", ""))
+        if not nama or not nim:
+            continue
+        norm = normalize_name_for_compare(nama)
+        if norm:
+            if norm not in master_norm_to_nim:
+                master_norm_to_nim[norm] = nim
+            master_by_first_char[norm[0]].append((norm, nim))
+
+    result = penilaian.copy()
+    dup_mask = result["nim"].ne("") & result["nim"].duplicated(keep=False)
+
+    for idx in result[dup_mask].index:
+        nama_nilai = str(result.at[idx, "nama_nilai"] or "")
+        if is_blank(nama_nilai):
+            continue
+
+        norm_nilai = normalize_name_for_compare(nama_nilai)
+        if not norm_nilai:
+            continue
+
+        # Coba exact normalized match dulu (O(1))
+        if norm_nilai in master_norm_to_nim:
+            result.at[idx, "nim"] = master_norm_to_nim[norm_nilai]
+            continue
+
+        # Coba similarity match ke kandidat dengan huruf pertama yang sama dan panjang mirip
+        best_nim: str | None = None
+        best_score = 0.0
+        candidates = master_by_first_char.get(norm_nilai[0], [])
+        len_val = len(norm_nilai)
+        matcher = SequenceMatcher(None, norm_nilai, "")
+        for m_norm, m_nim in candidates:
+            if abs(len(m_norm) - len_val) > 3:
+                continue
+            matcher.set_seq2(m_norm)
+            sim = matcher.ratio()
+            if sim > best_score and sim >= JILID_NAME_SIMILARITY_THRESHOLD:
+                best_score = sim
+                best_nim = m_nim
+
+        if best_nim is not None:
+            result.at[idx, "nim"] = best_nim
+
+    return result
+
+
 def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Dict[str, Any]:
-    """Gabungkan file penilaian dengan data master lalu kelompokkan per Jilid & jenis kelamin."""
+    """Gabungkan file penilaian dengan data master lalu kelompokkan per Jilid & jenis kelamin.
+
+    Aturan klasifikasi:
+    - Data diri (Nama, NIM, Prodi, Jenis Kelamin, Kelas PAI) SELALU diambil dari master.
+    - NIM duplikat di file nilai: dikoreksi dengan mencari NIM yang benar dari master
+      berdasarkan kesamaan nama, sebelum proses merge dilakukan.
+    - Nilai kosong: langsung masuk Jilid 1 (bukan masalah).
+    - Nilai di luar rentang: tetap diklasifikasikan menggunakan compute_jilid().
+
+    Data Bermasalah hanya berisi ketidaksesuaian antara file nilai dan file master:
+    1. NIM di file nilai tidak ditemukan di file master.
+    2. Nama di file nilai berbeda jauh dengan nama di file master (NIM sama).
+    3. Jenis Kelamin di file master kosong / tidak dikenali (L/P).
+    """
     penilaian = penilaian_df.copy()
     penilaian["total_score"] = penilaian["total_nilai"].apply(parse_score)
 
-    duplicate_nim_rows = penilaian[penilaian["nim"].ne("") & penilaian["nim"].duplicated(keep=False)]
+    # Koreksi NIM duplikat menggunakan nama dari master sebelum merge
+    penilaian = _resolve_nim_by_name(penilaian, master_df)
+
+    # Setelah koreksi, deduplikat berdasarkan NIM (ambil baris terakhir)
     penilaian_unique = penilaian.drop_duplicates(subset=["nim"], keep="last")
 
     merged = penilaian_unique.merge(master_df, on="nim", how="left", suffixes=("_nilai", ""))
 
     problems: List[Dict[str, Any]] = []
-
-    for _, row in duplicate_nim_rows.iterrows():
-        problems.append({
-            "NIM": row.get("nim", ""),
-            "Nama": row.get("nama_nilai", ""),
-            "Program Studi": row.get("prodi_nilai", ""),
-            "Jenis Masalah": JILID_PROBLEM_TYPE_DUPLICATE_NIM,
-            "Total Nilai": row.get("total_nilai", ""),
-            "Keterangan": JILID_PROBLEM_DUPLICATE_NIM,
-        })
-
     classified_rows: List[Dict[str, Any]] = []
+    otomatis_rows: List[Dict[str, Any]] = []
 
     for _, row in merged.iterrows():
-        reasons: List[str] = []
-        problem_type = ""
         master_found = not is_blank(row.get("kode_kelas_pai", ""))
         nama_nilai = row.get("nama_nilai", "")
+
+        # --- Cek ketidaksesuaian nilai vs master ---
+        problem_type = ""
+        reason = ""
+
         if not master_found:
-            reasons.append(JILID_PROBLEM_NIM_NOT_IN_MASTER)
             problem_type = JILID_PROBLEM_TYPE_NIM_NOT_IN_MASTER
+            reason = JILID_PROBLEM_NIM_NOT_IN_MASTER
         elif row.get("jenis_kelamin") not in ("L", "P"):
-            reasons.append(JILID_PROBLEM_GENDER_UNKNOWN)
             problem_type = JILID_PROBLEM_TYPE_GENDER_UNKNOWN
+            reason = JILID_PROBLEM_GENDER_UNKNOWN
         elif (
             not is_blank(nama_nilai)
             and name_similarity(row.get("nama", ""), nama_nilai) < JILID_NAME_SIMILARITY_THRESHOLD
         ):
-            reasons.append(JILID_PROBLEM_NAME_MISMATCH)
             problem_type = JILID_PROBLEM_TYPE_NAME_MISMATCH
+            reason = JILID_PROBLEM_NAME_MISMATCH
 
-        total_score = row.get("total_score")
-        if total_score is None:
-            reasons.append(JILID_PROBLEM_SCORE_EMPTY)
-            problem_type = problem_type or JILID_PROBLEM_TYPE_SCORE_EMPTY
-        elif not (JILID_TOTAL_RANGE["min"] <= total_score <= JILID_TOTAL_RANGE["max"]):
-            reasons.append(
-                JILID_PROBLEM_SCORE_OUT_OF_RANGE.format(
-                    total_score=total_score,
-                    minimum=JILID_TOTAL_RANGE["min"],
-                    maximum=JILID_TOTAL_RANGE["max"],
-                )
+        if problem_type:
+            # Nama & Prodi dari master jika ditemukan, fallback ke file nilai
+            nama_display = (
+                row.get("nama") if master_found and not is_blank(row.get("nama", ""))
+                else nama_nilai
             )
-            problem_type = problem_type or JILID_PROBLEM_TYPE_SCORE_OUT_OF_RANGE
-
-        if reasons:
-            prodi_display = row.get("prodi") if master_found and not is_blank(row.get("prodi", "")) else row.get("prodi_nilai", "")
+            prodi_display = (
+                row.get("prodi") if master_found and not is_blank(row.get("prodi", ""))
+                else row.get("prodi_nilai", "")
+            )
             problems.append({
                 "NIM": row.get("nim", ""),
-                "Nama": row.get("nama") if master_found and not is_blank(row.get("nama", "")) else nama_nilai,
+                "Nama": nama_display,
                 "Program Studi": prodi_display,
                 "Jenis Masalah": problem_type,
                 "Total Nilai": row.get("total_nilai", ""),
-                "Keterangan": "; ".join(reasons),
+                "Keterangan": reason,
             })
         else:
+            # Tidak bermasalah dari sisi master — cek nilai
+            total_score = row.get("total_score")
+            score_empty = total_score is None or (isinstance(total_score, float) and pd.isna(total_score))
+            if score_empty:
+                # Nilai kosong → Jilid 1 otomatis
+                jilid = "Jilid 1"
+                keterangan = JILID_EMPTY_SCORE_NOTE
+                otomatis_rows.append({
+                    "NIM": row.get("nim", ""),
+                    "Nama": row.get("nama", ""),
+                    "Jenis Kelamin": "Laki-laki" if row.get("jenis_kelamin") == "L" else "Perempuan",
+                    "Kelas PAI": row.get("kode_kelas_pai", ""),
+                    "Program Studi": row.get("prodi", ""),
+                    "Keterangan": JILID_EMPTY_SCORE_NOTE,
+                })
+            elif not (JILID_TOTAL_RANGE["min"] <= total_score <= JILID_TOTAL_RANGE["max"]):
+                # Nilai di luar rentang → Data Bermasalah (data diri dari master)
+                problems.append({
+                    "NIM": row.get("nim", ""),
+                    "Nama": row.get("nama", ""),
+                    "Program Studi": row.get("prodi", ""),
+                    "Jenis Masalah": JILID_PROBLEM_TYPE_SCORE_OUT_OF_RANGE,
+                    "Total Nilai": row.get("total_nilai", ""),
+                    "Keterangan": JILID_PROBLEM_SCORE_OUT_OF_RANGE.format(
+                        total_score=total_score,
+                        minimum=JILID_TOTAL_RANGE["min"],
+                        maximum=JILID_TOTAL_RANGE["max"],
+                    ),
+                })
+                continue
+            else:
+                jilid = compute_jilid(total_score)
+                keterangan = ""
             classified_rows.append({
                 "nama": row.get("nama", ""),
                 "jenis_kelamin": row.get("jenis_kelamin", ""),
                 "nim": row.get("nim", ""),
                 "kode_kelas_pai": row.get("kode_kelas_pai", ""),
                 "prodi": row.get("prodi", ""),
-                "keterangan": "",
-                "_jilid": compute_jilid(total_score),
+                "keterangan": keterangan,
+                "_jilid": jilid,
             })
 
     # Peserta master yang Kelas PAI-nya sudah "kesentuh" gelombang ini (ada
@@ -261,7 +357,6 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
         & ~master_df["nim"].isin(tested_nim)
         & master_df["kode_kelas_pai"].isin(tested_classes)
     )
-    total_otomatis_jilid1 = 0
     for _, row in master_df.loc[untested_mask].iterrows():
         if row.get("jenis_kelamin") not in ("L", "P"):
             problems.append({
@@ -282,12 +377,32 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
             "keterangan": JILID_AUTO_ASSIGN_NOTE,
             "_jilid": "Jilid 1",
         })
-        total_otomatis_jilid1 += 1
+        otomatis_rows.append({
+            "NIM": row.get("nim", ""),
+            "Nama": row.get("nama", ""),
+            "Jenis Kelamin": "Laki-laki" if row.get("jenis_kelamin") == "L" else "Perempuan",
+            "Kelas PAI": row.get("kode_kelas_pai", ""),
+            "Program Studi": row.get("prodi", ""),
+            "Keterangan": JILID_AUTO_ASSIGN_NOTE,
+        })
 
     valid_rows = pd.DataFrame(
         classified_rows,
         columns=["nama", "jenis_kelamin", "nim", "kode_kelas_pai", "prodi", "keterangan", "_jilid"],
     )
+
+    data_otomatis_jilid1 = pd.DataFrame(
+        otomatis_rows,
+        columns=["NIM", "Nama", "Jenis Kelamin", "Kelas PAI", "Program Studi", "Keterangan"],
+    )
+    if not data_otomatis_jilid1.empty:
+        sort_keys = data_otomatis_jilid1["Kelas PAI"].apply(natural_sort_kelas_key)
+        data_otomatis_jilid1["_sort_angka"] = sort_keys.apply(lambda x: x[0])
+        data_otomatis_jilid1["_sort_huruf"] = sort_keys.apply(lambda x: x[1])
+        data_otomatis_jilid1["_sort_asli"] = sort_keys.apply(lambda x: x[2])
+        data_otomatis_jilid1 = data_otomatis_jilid1.sort_values(
+            by=["_sort_angka", "_sort_huruf", "_sort_asli", "Nama"], ascending=True
+        ).drop(columns=["_sort_angka", "_sort_huruf", "_sort_asli"]).reset_index(drop=True)
 
     groups: Dict[Tuple[str, str], pd.DataFrame] = {}
     ringkasan_rows: List[Dict[str, Any]] = []
@@ -330,7 +445,7 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
 
     summary = {
         "total_dinilai": int(len(penilaian)),
-        "total_otomatis_jilid1": total_otomatis_jilid1,
+        "total_otomatis_jilid1": int(len(data_otomatis_jilid1)),
         "total_terklasifikasi": int(len(valid_rows)),
         "total_bermasalah": int(len(data_bermasalah)),
     }
@@ -340,6 +455,7 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
         "ringkasan": ringkasan,
         "data_bermasalah": data_bermasalah,
         "masalah_ringkasan": masalah_ringkasan,
+        "data_otomatis_jilid1": data_otomatis_jilid1,
         "summary": summary,
     }
 
@@ -348,6 +464,7 @@ def export_jilid_excel(
     groups: Dict[Tuple[str, str], pd.DataFrame],
     data_bermasalah: pd.DataFrame,
     masalah_ringkasan: pd.DataFrame | None = None,
+    data_otomatis_jilid1: pd.DataFrame | None = None,
 ) -> bytes:
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
@@ -359,6 +476,8 @@ def export_jilid_excel(
                 sheet_name = jilid_sheet_name(jilid_label, gender_label)
                 labeled = group.rename(columns=JILID_OUTPUT_COLUMN_LABELS)
                 labeled.to_excel(writer, sheet_name=sheet_name, index=False)
+        if data_otomatis_jilid1 is not None and not data_otomatis_jilid1.empty:
+            data_otomatis_jilid1.to_excel(writer, sheet_name="Otomatis Jilid 1", index=False)
         if masalah_ringkasan is not None:
             masalah_ringkasan.to_excel(writer, sheet_name="Ringkasan Masalah", index=False)
         data_bermasalah.to_excel(writer, sheet_name="Data Bermasalah", index=False)
