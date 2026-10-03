@@ -268,19 +268,30 @@ export function RekapJilidSection() {
               </p>
             </div>
             <div className="rounded-xl bg-red-50 p-4">
-              <p className="text-xs font-semibold text-red-700">Data Bermasalah</p>
+              <p
+                className="inline-flex items-center gap-1 text-xs font-semibold text-red-700"
+                title="Baris yang tidak masuk kelas Jilid, termasuk baris NIM duplikat, NIM tidak di master, nama beda, jenis kelamin kosong, atau nilai di luar rentang."
+              >
+                Data Bermasalah
+                <Info size={12} className="shrink-0 opacity-70" />
+              </p>
               <p className="mt-1 text-2xl font-bold text-slate-900">
                 {result.summary.total_bermasalah.toLocaleString("id-ID")}
               </p>
+              {Boolean(result.summary.total_duplikat_disaring && result.summary.total_duplikat_disaring > 0) && (
+                <p className="mt-0.5 text-[11px] text-red-600">
+                  Termasuk {result.summary.total_duplikat_disaring} baris duplikat
+                </p>
+              )}
             </div>
           </div>
 
           <p className="rounded-xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
-            <span className="font-semibold text-slate-600">Catatan:</span> &quot;Otomatis Jilid 1&quot; adalah
-            peserta di file master yang kelasnya sudah kesentuh gelombang ini tapi tidak ikut tes tashih —
-            mereka tidak pernah ada di file penilaian, jadi jangan dikurangkan dari &quot;Total Peserta
-            Dinilai&quot;. &quot;Berhasil Diklasifikasikan&quot; = peserta valid dari file penilaian{" "}
-            <span className="font-semibold">ditambah</span> peserta Otomatis Jilid 1 di atas.
+            <span className="font-semibold text-slate-600">Alur Perhitungan:</span>{" "}
+            Total Dinilai ({result.summary.total_dinilai.toLocaleString("id-ID")}){" "}
+            − Data Bermasalah ({result.summary.total_bermasalah.toLocaleString("id-ID")}){" "}
+            + Otomatis Jilid 1 ({result.summary.total_otomatis_jilid1.toLocaleString("id-ID")}){" "}
+            = <span className="font-semibold text-emerald-700">Berhasil Diklasifikasikan ({result.summary.total_terklasifikasi.toLocaleString("id-ID")})</span>.
           </p>
 
           <div>

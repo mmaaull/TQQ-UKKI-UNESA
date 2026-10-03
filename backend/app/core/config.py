@@ -150,6 +150,10 @@ JILID_NAME_SIMILARITY_THRESHOLD = 0.88
 # 1. NIM di file nilai tidak ditemukan di file master
 # 2. Nama berbeda jauh antara file master dan file nilai (NIM sama)
 # 3. Jenis Kelamin di file master tidak dikenali (L/P)
+JILID_PROBLEM_DUPLICATE_NIM = (
+    "NIM ini muncul lebih dari sekali di file penilaian. Baris duplikat ini disisihkan ke Data Bermasalah "
+    "(sistem memakai data baris terakhir untuk kelas Jilid)."
+)
 JILID_PROBLEM_NIM_NOT_IN_MASTER = (
     "NIM ini ada nilainya di file penilaian, tapi tidak ditemukan di file master. "
     "Kemungkinan NIM salah ketik, atau mahasiswa ini memang belum terdaftar di file master."
@@ -171,12 +175,14 @@ JILID_PROBLEM_SCORE_OUT_OF_RANGE = (
 
 # Label kategori singkat (kolom "Jenis Masalah") untuk breakdown jumlah
 # masalah per jenis di Rekap Jilid.
+JILID_PROBLEM_TYPE_DUPLICATE_NIM = "NIM Duplikat di File Penilaian"
 JILID_PROBLEM_TYPE_NIM_NOT_IN_MASTER = "NIM Tidak Ditemukan di File Master"
 JILID_PROBLEM_TYPE_GENDER_UNKNOWN = "Jenis Kelamin Tidak Dikenali"
 JILID_PROBLEM_TYPE_NAME_MISMATCH = "Nama Berbeda (Master vs Penilaian)"
 JILID_PROBLEM_TYPE_SCORE_OUT_OF_RANGE = "Total Nilai di Luar Rentang"
 
 JILID_PROBLEM_TYPE_ORDER = [
+    JILID_PROBLEM_TYPE_DUPLICATE_NIM,
     JILID_PROBLEM_TYPE_NIM_NOT_IN_MASTER,
     JILID_PROBLEM_TYPE_GENDER_UNKNOWN,
     JILID_PROBLEM_TYPE_NAME_MISMATCH,

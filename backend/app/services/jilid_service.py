@@ -32,10 +32,12 @@ from backend.app.core.config import (
     JILID_NAME_SIMILARITY_THRESHOLD,
     JILID_OUTPUT_COLUMN_LABELS,
     JILID_OUTPUT_COLUMNS,
+    JILID_PROBLEM_DUPLICATE_NIM,
     JILID_PROBLEM_GENDER_UNKNOWN,
     JILID_PROBLEM_NAME_MISMATCH,
     JILID_PROBLEM_NIM_NOT_IN_MASTER,
     JILID_PROBLEM_SCORE_OUT_OF_RANGE,
+    JILID_PROBLEM_TYPE_DUPLICATE_NIM,
     JILID_PROBLEM_TYPE_GENDER_UNKNOWN,
     JILID_PROBLEM_TYPE_NAME_MISMATCH,
     JILID_PROBLEM_TYPE_NIM_NOT_IN_MASTER,
@@ -242,10 +244,12 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
     - Nilai kosong: langsung masuk Jilid 1 (bukan masalah).
     - Nilai di luar rentang: tetap diklasifikasikan menggunakan compute_jilid().
 
-    Data Bermasalah hanya berisi ketidaksesuaian antara file nilai dan file master:
-    1. NIM di file nilai tidak ditemukan di file master.
-    2. Nama di file nilai berbeda jauh dengan nama di file master (NIM sama).
-    3. Jenis Kelamin di file master kosong / tidak dikenali (L/P).
+    Data Bermasalah berisi:
+    1. NIM duplikat di file penilaian (baris duplikat disisihkan ke Data Bermasalah).
+    2. NIM di file nilai tidak ditemukan di file master.
+    3. Nama di file nilai berbeda jauh dengan nama di file master (NIM sama).
+    4. Jenis Kelamin di file master kosong / tidak dikenali (L/P).
+    5. Nilai di luar rentang wajar (0-100).
     """
     penilaian = penilaian_df.copy()
     penilaian["total_score"] = penilaian["total_nilai"].apply(parse_score)
@@ -253,14 +257,39 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
     # Koreksi NIM duplikat menggunakan nama dari master sebelum merge
     penilaian = _resolve_nim_by_name(penilaian, master_df)
 
-    # Setelah koreksi, deduplikat berdasarkan NIM (ambil baris terakhir)
+    # Setelah koreksi, identifikasi baris duplikat yang disaring (sebelum baris terakhir)
+    duplicate_mask = penilaian["nim"].ne("") & penilaian.duplicated(subset=["nim"], keep="last")
+    duplicate_rows = penilaian[duplicate_mask].copy()
+
+    # Deduplikat berdasarkan NIM (ambil baris terakhir)
     penilaian_unique = penilaian.drop_duplicates(subset=["nim"], keep="last")
+    total_duplikat_disaring = int(len(duplicate_rows))
 
     merged = penilaian_unique.merge(master_df, on="nim", how="left", suffixes=("_nilai", ""))
 
     problems: List[Dict[str, Any]] = []
     classified_rows: List[Dict[str, Any]] = []
     otomatis_rows: List[Dict[str, Any]] = []
+
+    # Masukkan baris duplikat yang disisihkan ke Data Bermasalah
+    master_lookup = (
+        master_df.set_index("nim")[["nama", "prodi"]].to_dict("index")
+        if not master_df.empty
+        else {}
+    )
+    for _, dup_row in duplicate_rows.iterrows():
+        dup_nim = dup_row.get("nim", "")
+        master_info = master_lookup.get(dup_nim, {})
+        nama_display = master_info.get("nama") or dup_row.get("nama_nilai", "")
+        prodi_display = master_info.get("prodi") or dup_row.get("prodi_nilai", "")
+        problems.append({
+            "NIM": dup_nim,
+            "Nama": nama_display,
+            "Program Studi": prodi_display,
+            "Jenis Masalah": JILID_PROBLEM_TYPE_DUPLICATE_NIM,
+            "Total Nilai": dup_row.get("total_nilai", ""),
+            "Keterangan": JILID_PROBLEM_DUPLICATE_NIM,
+        })
 
     for _, row in merged.iterrows():
         master_found = not is_blank(row.get("kode_kelas_pai", ""))
@@ -445,6 +474,7 @@ def build_jilid_recap(master_df: pd.DataFrame, penilaian_df: pd.DataFrame) -> Di
 
     summary = {
         "total_dinilai": int(len(penilaian)),
+        "total_duplikat_disaring": total_duplikat_disaring,
         "total_otomatis_jilid1": int(len(data_otomatis_jilid1)),
         "total_terklasifikasi": int(len(valid_rows)),
         "total_bermasalah": int(len(data_bermasalah)),
