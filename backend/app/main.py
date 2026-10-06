@@ -25,10 +25,12 @@ from backend.app.services.excel_service import (
 )
 from backend.app.services.session_store import (
     create_jilid_session,
+    create_kehadiran_session,
     create_rapikan_session,
     create_rekap_session,
     create_tentor_session,
     get_jilid_session,
+    get_kehadiran_session,
     get_rapikan_session,
     get_rekap_session,
     get_tentor_session,
@@ -47,6 +49,13 @@ from backend.app.services.jilid_service import (
     export_jilid_excel,
     read_master_file,
     read_penilaian_tashih_file,
+)
+from backend.app.services.kehadiran_service import (
+    KehadiranRequiredColumnError,
+    KelasFileError,
+    add_kehadiran_to_kelas,
+    build_kehadiran_summary,
+    read_kehadiran_file,
 )
 from backend.app.services.tentor_service import (
     TentorAllocationError,
@@ -350,6 +359,76 @@ def download_rekap_jilid(session_id: str) -> Response:
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={
             "Content-Disposition": 'attachment; filename="rekap_pembagian_kelas_jilid.xlsx"'
+        },
+    )
+
+
+@app.post("/api/kehadiran/process")
+async def process_kehadiran_upload(
+    kehadiran_file: UploadFile = File(...),
+    kelas_file: UploadFile = File(...),
+) -> dict:
+    """Tambahkan keterangan Hadir/Tidak Hadir ke file pembagian kelas."""
+    kelas_name = kelas_file.filename or ""
+    if Path(kelas_name).suffix.lower() != ".xlsx":
+        raise HTTPException(status_code=415, detail="kelas_file harus berformat .xlsx.")
+    kelas_bytes = await kelas_file.read()
+    if not kelas_bytes:
+        raise HTTPException(status_code=400, detail="kelas_file kosong.")
+
+    kehadiran_name = kehadiran_file.filename or ""
+    if Path(kehadiran_name).suffix.lower() not in {".xlsx", ".xls"}:
+        raise HTTPException(status_code=415, detail="kehadiran_file harus berformat .xlsx atau .xls.")
+    kehadiran_bytes = await kehadiran_file.read()
+    if not kehadiran_bytes:
+        raise HTTPException(status_code=400, detail="kehadiran_file kosong.")
+    kehadiran_upload = BytesIO(kehadiran_bytes)
+    kehadiran_upload.name = kehadiran_name
+
+    try:
+        kehadiran = await asyncio.to_thread(read_kehadiran_file, kehadiran_upload)
+    except KehadiranRequiredColumnError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"kehadiran_file tidak dapat dibaca sebagai file Excel: {exc}",
+        ) from exc
+    if not kehadiran:
+        raise HTTPException(status_code=422, detail="Data rekap kehadiran kosong atau tidak ditemukan.")
+
+    try:
+        excel_bytes, ringkasan, tidak_ada = await asyncio.to_thread(
+            add_kehadiran_to_kelas, kelas_bytes, kehadiran
+        )
+    except KelasFileError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"kelas_file tidak dapat dibaca sebagai file Excel: {exc}",
+        ) from exc
+
+    session_id = create_kehadiran_session(excel_bytes)
+    return {
+        "session_id": session_id,
+        "summary": build_kehadiran_summary(ringkasan),
+        "ringkasan_kelas": dataframe_records(ringkasan),
+        "tidak_ada_di_rekap": dataframe_records(tidak_ada),
+    }
+
+
+@app.get("/api/kehadiran/{session_id}/download")
+def download_kehadiran_result(session_id: str) -> Response:
+    """Download Excel pembagian kelas yang sudah diberi keterangan kehadiran."""
+    session = get_kehadiran_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session kehadiran tidak ditemukan.")
+    return Response(
+        content=session.excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": 'attachment; filename="pembagian_kelas_dengan_kehadiran.xlsx"'
         },
     )
 
