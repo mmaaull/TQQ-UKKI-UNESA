@@ -87,6 +87,20 @@ export type RekapJilidProcessResponse = {
   data_otomatis_jilid1: ApiRecord[];
 };
 
+export type KehadiranProcessResponse = {
+  session_id: string;
+  summary: {
+    total_mahasiswa: number;
+    total_hadir: number;
+    total_tidak_hadir: number;
+    total_tidak_ada_di_rekap: number;
+    total_kelas: number;
+    persentase_hadir: number;
+  };
+  ringkasan_kelas: ApiRecord[];
+  tidak_ada_di_rekap: ApiRecord[];
+};
+
 export type TentorProcessResponse = {
   session_id: string;
   summary: {

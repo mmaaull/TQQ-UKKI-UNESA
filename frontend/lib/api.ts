@@ -3,6 +3,7 @@ import type {
   ChartDatum,
   ClassProgressDatum,
   ExportKind,
+  KehadiranProcessResponse,
   KpiItem,
   RekapProcessResponse,
   RekapRow,
@@ -170,6 +171,35 @@ export async function processRekapJilid(masterFile: File, penilaianFile: File): 
     throw new ApiError(message, response.status);
   }
   return response.json() as Promise<RekapJilidProcessResponse>;
+}
+
+export async function processKehadiran(kehadiranFile: File, kelasFile: File): Promise<KehadiranProcessResponse> {
+  const formData = new FormData();
+  formData.append("kehadiran_file", kehadiranFile);
+  formData.append("kelas_file", kelasFile);
+  const response = await fetch(`${apiUrl}/api/kehadiran/process`, { method: "POST", body: formData });
+  if (!response.ok) {
+    let message = `Proses kehadiran gagal (${response.status}). Silakan coba kembali.`;
+    try {
+      const body: unknown = await response.json();
+      if (typeof body === "object" && body !== null && "detail" in body) {
+        const detail = (body as { detail: unknown }).detail;
+        message = typeof detail === "string" ? detail : JSON.stringify(detail);
+      }
+    } catch {
+      // Gunakan pesan default jika response bukan JSON
+    }
+    throw new ApiError(message, response.status);
+  }
+  return response.json() as Promise<KehadiranProcessResponse>;
+}
+
+export async function downloadKehadiran(sessionId: string): Promise<string> {
+  const response = await fetch(`${apiUrl}/api/kehadiran/${sessionId}/download`);
+  if (!response.ok) {
+    throw new ApiError("Unduhan hasil kehadiran gagal. Silakan proses ulang file.", response.status);
+  }
+  return triggerBrowserDownload(response, "pembagian_kelas_dengan_kehadiran.xlsx");
 }
 
 export async function downloadRekapJilid(sessionId: string): Promise<string> {

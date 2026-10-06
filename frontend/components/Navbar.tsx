@@ -12,6 +12,7 @@ type NavItem = { label: string; href: string };
 const navItems: NavItem[] = [
   { label: "Rekap Nilai", href: "/" },
   { label: "Rekap Jilid", href: "/rekap-jilid" },
+  { label: "Kehadiran", href: "/kehadiran" },
 ];
 
 export function Navbar() {
