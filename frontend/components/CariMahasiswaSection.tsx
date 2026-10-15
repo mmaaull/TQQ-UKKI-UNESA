@@ -1,29 +1,29 @@
 "use client";
 
-import { AlertCircle, ExternalLink, LoaderCircle, RotateCcw, Search, UploadCloud, X } from "lucide-react";
+import {
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  LoaderCircle,
+  RotateCcw,
+  Search,
+  UploadCloud,
+  X,
+} from "lucide-react";
 import { useId, useMemo, useState } from "react";
 
 import { buildCariMahasiswaIndex } from "@/lib/api";
 import type { CariMahasiswaIndexResponse, CariMahasiswaRow } from "@/types/dashboard";
 
-type SearchField = "semua" | "nim" | "nama";
-
-const MAX_RESULTS = 50;
-
-const FIELD_OPTIONS: { value: SearchField; label: string }[] = [
-  { value: "semua", label: "NIM & Nama" },
-  { value: "nim", label: "NIM" },
-  { value: "nama", label: "Nama" },
-];
+const ITEMS_PER_PAGE = 10;
 
 function normalizeText(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-function matchesQuery(row: CariMahasiswaRow, field: SearchField, query: string, tokens: string[]): boolean {
-  const matchNim = field !== "nama" && row.nim.includes(query.replace(/\s+/g, ""));
-  if (matchNim) return true;
-  if (field === "nim") return false;
+function matchesQuery(row: CariMahasiswaRow, query: string, tokens: string[]): boolean {
+  if (row.nim.includes(query.replace(/\s+/g, ""))) return true;
   const nama = normalizeText(row.nama);
   return tokens.length > 0 && tokens.every((token) => nama.includes(token));
 }
@@ -54,23 +54,23 @@ export function CariMahasiswaSection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
-  const [field, setField] = useState<SearchField>("semua");
+  const [currentPage, setCurrentPage] = useState(1);
   const [inputResetKey, setInputResetKey] = useState(0);
 
   const trimmedQuery = query.trim();
   const results = useMemo(() => {
     if (!index || !trimmedQuery) return [];
     const tokens = normalizeText(trimmedQuery).split(" ").filter(Boolean);
-    return index.mahasiswa.filter((row) => matchesQuery(row, field, trimmedQuery, tokens));
-  }, [index, field, trimmedQuery]);
+    return index.mahasiswa.filter((row) => matchesQuery(row, trimmedQuery, tokens));
+  }, [index, trimmedQuery]);
 
-  const shownRows = results.slice(0, MAX_RESULTS);
-  const dataColumns = (index?.data_columns ?? []).filter((column) =>
-    shownRows.some((row) => row.data[column])
-  );
-  const infoColumns = (index?.info_columns ?? []).filter((column) =>
-    shownRows.some((row) => row.info[column])
-  );
+  // Kolom dihitung dari semua hasil (bukan per halaman) supaya tabel tidak berubah bentuk saat pindah halaman.
+  const dataColumns = (index?.data_columns ?? []).filter((column) => results.some((row) => row.data[column]));
+  const infoColumns = (index?.info_columns ?? []).filter((column) => results.some((row) => row.info[column]));
+  const totalPages = Math.max(1, Math.ceil(results.length / ITEMS_PER_PAGE));
+  const validPage = Math.min(currentPage, totalPages);
+  const startIndex = (validPage - 1) * ITEMS_PER_PAGE;
+  const shownRows = results.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   const showSource = (index?.summary.total_file ?? 0) > 1;
 
   async function handleFileChange(selected: File[]) {
@@ -78,6 +78,7 @@ export function CariMahasiswaSection() {
     setIndex(null);
     setError("");
     setQuery("");
+    setCurrentPage(1);
     if (selected.length === 0) return;
     setLoading(true);
     try {
@@ -163,7 +164,10 @@ export function CariMahasiswaSection() {
                 aria-label="Cari mahasiswa berdasarkan NIM atau Nama"
                 className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                 disabled={!index}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder={index ? "Ketik NIM atau nama mahasiswa..." : "Upload file terlebih dahulu"}
                 type="search"
                 value={query}
@@ -178,21 +182,6 @@ export function CariMahasiswaSection() {
                   <X size={14} />
                 </button>
               )}
-            </div>
-            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
-              {FIELD_OPTIONS.map((option) => (
-                <button
-                  className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
-                    field === option.value ? "bg-white text-blue-700 shadow-sm" : "text-slate-500 hover:text-slate-800"
-                  }`}
-                  disabled={!index}
-                  key={option.value}
-                  onClick={() => setField(option.value)}
-                  type="button"
-                >
-                  {option.label}
-                </button>
-              ))}
             </div>
           </div>
 
@@ -217,9 +206,7 @@ export function CariMahasiswaSection() {
           <p className="mb-2 text-sm font-semibold text-slate-800">
             {results.length === 0
               ? `Tidak ada mahasiswa yang cocok dengan "${trimmedQuery}".`
-              : `${results.length.toLocaleString("id-ID")} hasil ditemukan${
-                  results.length > MAX_RESULTS ? ` (menampilkan ${MAX_RESULTS} teratas, persempit pencarian)` : ""
-                }`}
+              : `${results.length.toLocaleString("id-ID")} hasil ditemukan`}
           </p>
           {results.length > 0 && (
             <div className="overflow-x-auto rounded-xl border border-slate-200">
@@ -227,6 +214,7 @@ export function CariMahasiswaSection() {
                 <thead className="bg-slate-50 text-slate-600">
                   <tr>
                     {[
+                      "No",
                       ...(showSource ? ["File"] : []),
                       "Sheet",
                       "NIM",
@@ -243,6 +231,7 @@ export function CariMahasiswaSection() {
                 <tbody className="divide-y divide-slate-100">
                   {shownRows.map((row, rowIndex) => (
                     <tr className="hover:bg-blue-50/40" key={`${row.sumber}-${row.sheet}-${row.nim}-${rowIndex}`}>
+                      <td className="whitespace-nowrap px-3 py-2 text-slate-500">{startIndex + rowIndex + 1}</td>
                       {showSource && <td className="px-3 py-2 text-slate-600">{row.sumber}</td>}
                       <td className="whitespace-nowrap px-3 py-2">
                         <span className="rounded-md bg-blue-100 px-2 py-0.5 font-bold text-blue-800">{row.sheet}</span>
@@ -263,6 +252,39 @@ export function CariMahasiswaSection() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {totalPages > 1 && (
+            <div className="mt-3 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+              <p className="text-xs text-slate-500">
+                Menampilkan <span className="font-semibold text-slate-700">{startIndex + 1}</span> -{" "}
+                <span className="font-semibold text-slate-700">{startIndex + shownRows.length}</span> dari{" "}
+                <span className="font-semibold text-slate-700">{results.length.toLocaleString("id-ID")}</span> data
+              </p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  disabled={validPage <= 1}
+                  onClick={() => setCurrentPage(validPage - 1)}
+                  type="button"
+                >
+                  <ChevronLeft size={14} />
+                  <span>Sebelumnya</span>
+                </button>
+                <span className="px-2 text-xs font-medium text-slate-700">
+                  Halaman <span className="font-bold text-slate-900">{validPage}</span> dari{" "}
+                  <span className="font-bold text-slate-900">{totalPages}</span>
+                </span>
+                <button
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  disabled={validPage >= totalPages}
+                  onClick={() => setCurrentPage(validPage + 1)}
+                  type="button"
+                >
+                  <span>Selanjutnya</span>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
           )}
         </div>
