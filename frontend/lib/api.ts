@@ -1,5 +1,6 @@
 import type {
   ApiRecord,
+  CariMahasiswaIndexResponse,
   ChartDatum,
   ClassProgressDatum,
   ExportKind,
@@ -270,6 +271,31 @@ export async function downloadTentor(sessionId: string): Promise<string> {
     throw new ApiError("Unduhan hasil pembagian tentor gagal. Silakan proses ulang file.", response.status);
   }
   return triggerBrowserDownload(response, "pembagian_tentor_tqq_akbar.xlsx");
+}
+
+export async function buildCariMahasiswaIndex(files: File[]): Promise<CariMahasiswaIndexResponse> {
+  const formData = new FormData();
+  for (const file of files) formData.append("files", file);
+
+  const response = await fetch(`${apiUrl}/api/cari-mahasiswa/index`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let message = "Membaca file gagal. Silakan coba kembali.";
+    try {
+      const body: unknown = await response.json();
+      if (typeof body === "object" && body !== null && "detail" in body) {
+        const detail = body.detail;
+        message = typeof detail === "string" ? detail : JSON.stringify(detail);
+      }
+    } catch {
+      // Gunakan pesan default jika response error bukan JSON.
+    }
+    throw new ApiError(message, response.status);
+  }
+  return response.json() as Promise<CariMahasiswaIndexResponse>;
 }
 
 export function makeKpiItems(summary: Summary): KpiItem[] {

@@ -57,6 +57,7 @@ from backend.app.services.kehadiran_service import (
     build_kehadiran_summary,
     read_kehadiran_file,
 )
+from backend.app.services.cari_mahasiswa_service import KelasIndexError, build_kelas_index
 from backend.app.services.tentor_service import (
     TentorAllocationError,
     TentorRequiredDataError,
@@ -431,6 +432,25 @@ def download_kehadiran_result(session_id: str) -> Response:
             "Content-Disposition": 'attachment; filename="pembagian_kelas_dengan_kehadiran.xlsx"'
         },
     )
+
+
+@app.post("/api/cari-mahasiswa/index")
+async def build_cari_mahasiswa_index(files: list[UploadFile] = File(...)) -> dict:
+    """Baca satu atau lebih file Excel (format bebas, bisa banyak sheet) menjadi daftar mahasiswa."""
+    uploads: list[tuple[str, bytes]] = []
+    for upload in files:
+        filename = upload.filename or ""
+        if Path(filename).suffix.lower() not in {".xlsx", ".xls"}:
+            raise HTTPException(status_code=415, detail=f"{filename} harus berformat .xlsx atau .xls.")
+        contents = await upload.read()
+        if not contents:
+            raise HTTPException(status_code=400, detail=f"{filename} kosong.")
+        uploads.append((filename, contents))
+
+    try:
+        return await asyncio.to_thread(build_kelas_index, uploads)
+    except KelasIndexError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 def _validate_jumlah_tentor(jumlah_tentor_laki_laki: int, jumlah_tentor_perempuan: int) -> None:

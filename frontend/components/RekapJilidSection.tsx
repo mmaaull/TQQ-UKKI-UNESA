@@ -17,6 +17,7 @@ import { useId, useState } from "react";
 import { downloadRekapJilid, processRekapJilid } from "@/lib/api";
 import type { ExportStatus, ProcessStatus, RekapJilidProcessResponse } from "@/types/dashboard";
 
+import { CariMahasiswaSection } from "./CariMahasiswaSection";
 import { JilidOtomatisTable } from "./JilidOtomatisTable";
 import { JilidProblemTable } from "./JilidProblemTable";
 import { PaginatedTable } from "./PaginatedTable";
@@ -346,6 +347,8 @@ export function RekapJilidSection() {
           : undefined
       }
     />
+
+    <CariMahasiswaSection />
     </div>
   );
 }

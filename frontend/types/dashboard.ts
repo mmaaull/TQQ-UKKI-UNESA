@@ -111,3 +111,21 @@ export type TentorProcessResponse = {
   };
   ringkasan_tentor: ApiRecord[];
 };
+
+export type CariMahasiswaRow = {
+  sumber: string;
+  sheet: string;
+  nim: string;
+  nama: string;
+  /** Kolom lain di tabel sumber (nama kolom mengikuti file asli). */
+  data: Record<string, string>;
+  /** Info di atas tabel sheet, mis. Tentor dan Link Grup WA. */
+  info: Record<string, string>;
+};
+
+export type CariMahasiswaIndexResponse = {
+  summary: { total_mahasiswa: number; total_sheet: number; total_file: number };
+  data_columns: string[];
+  info_columns: string[];
+  mahasiswa: CariMahasiswaRow[];
+};
