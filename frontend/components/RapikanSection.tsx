@@ -286,6 +286,7 @@ function PreviewTable({ rows, title }: { rows: ApiRecord[]; title: string }) {
 export function RapikanSection() {
   const inputId = useId();
   const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [status, setStatus] = useState<ProcessStatus>("idle");
   const [downloadStatus, setDownloadStatus] = useState<ExportStatus>("idle");
   const [error, setError] = useState("");
@@ -295,6 +296,7 @@ export function RapikanSection() {
 
   const isProcessing = status === "processing";
   const canProcess = status === "ready" || status === "error";
+  const hasFile = Boolean(file);
 
   function handleFileChange(nextFile: File | null) {
     setFile(nextFile);
@@ -354,18 +356,51 @@ export function RapikanSection() {
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_auto]">
         <label
-          className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-5 text-center transition ${
-            isProcessing ? "cursor-not-allowed opacity-60" : "hover:border-blue-400 hover:bg-blue-50"
+          className={`flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-5 text-center transition ${
+            isProcessing
+              ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-60"
+              : isDragging
+                ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/20"
+                : hasFile
+                  ? "border-emerald-300 bg-emerald-50/70 hover:border-emerald-400"
+                  : "border-slate-200 bg-slate-50 hover:border-blue-400 hover:bg-blue-50"
           }`}
           htmlFor={inputId}
+          onDragLeave={() => setIsDragging(false)}
+          onDragOver={(event) => {
+            event.preventDefault();
+            if (!isProcessing) setIsDragging(true);
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setIsDragging(false);
+            if (isProcessing) return;
+            const droppedFile = event.dataTransfer.files?.[0] ?? null;
+            if (droppedFile) handleFileChange(droppedFile);
+          }}
         >
-          <UploadCloud className="text-blue-700" size={32} />
-          <p className="mt-2 text-sm font-semibold text-slate-700">
-            {file?.name ?? "Upload file Excel hasil rekap"}
+          {hasFile ? (
+            <CheckCircle2 className="text-emerald-600" size={32} />
+          ) : (
+            <UploadCloud className="text-blue-700" size={32} />
+          )}
+          <p
+            className={`mt-2 max-w-full truncate px-2 text-sm font-semibold ${
+              hasFile ? "text-emerald-800" : "text-slate-700"
+            }`}
+            title={file?.name}
+          >
+            {file?.name ?? "Klik atau tarik file Excel hasil rekap ke sini"}
           </p>
-          <p className="mt-1 text-xs text-slate-500">Format .xlsx atau .xls</p>
-          <span className="mt-3 rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white">
-            Pilih File
+          <p className="mt-1 text-xs text-slate-500">
+            {hasFile ? "File siap diproses • Klik atau tarik untuk mengganti" : "Format .xlsx atau .xls"}
+          </p>
+          <span
+            className={`mt-3 rounded-lg px-4 py-2 text-xs font-bold text-white shadow-sm transition ${
+              hasFile ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-700 hover:bg-blue-800"
+            }`}
+          >
+            {hasFile ? "Ganti File" : "Pilih File"}
           </span>
           <input
             accept=".xlsx,.xls"
