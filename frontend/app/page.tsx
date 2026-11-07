@@ -178,10 +178,15 @@ export default function RekapNilaiPage() {
         </section>
 
         {sessionId && (
-          <p className="break-all rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-sm">
-            Rekap berhasil disimpan dalam sesi:{" "}
-            <span className="font-mono text-xs font-semibold">{sessionId}</span>
-          </p>
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-sm">
+            <p className="flex items-center gap-2 font-medium">
+              <ShieldCheck className="shrink-0 text-emerald-600" size={18} />
+              <span>Data rekap berhasil diproses dan siap diunduh pada bagian Export Hasil.</span>
+            </p>
+            <span className="hidden shrink-0 rounded-md bg-emerald-100/80 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 sm:inline-block">
+              Sesi Aktif
+            </span>
+          </div>
         )}
 
         {hasDashboard ? (

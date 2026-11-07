@@ -1,4 +1,4 @@
-import { BookMarked } from "lucide-react";
+import { BookMarked, UsersRound } from "lucide-react";
 
 import { RekapJilidSection } from "@/components/RekapJilidSection";
 
@@ -17,6 +17,13 @@ export default function RekapJilidPage() {
             Upload data master dan hasil tes tashih untuk membagi peserta ke kelas Jilid secara
             otomatis, lalu lanjutkan langsung ke pembagian tentor per kelas Jilid.
           </p>
+        </div>
+        <div className="pointer-events-none absolute -right-10 -top-14 hidden size-72 rounded-full border-[28px] border-blue-100/80 lg:block" />
+        <div className="pointer-events-none absolute bottom-7 right-10 hidden rotate-[-8deg] rounded-2xl border border-blue-100 bg-blue-50 p-4 text-blue-600 shadow-lg shadow-blue-100/50 lg:block">
+          <BookMarked size={52} strokeWidth={1.4} />
+        </div>
+        <div className="pointer-events-none absolute right-40 top-8 hidden rounded-xl bg-emerald-100 p-2.5 text-emerald-600 lg:block">
+          <UsersRound size={23} />
         </div>
       </section>
 

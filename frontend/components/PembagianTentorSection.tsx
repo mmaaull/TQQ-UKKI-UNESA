@@ -29,6 +29,7 @@ export function PembagianTentorSection({ jilidSessionId, jilidSessionLabel }: Pe
   const inputId = useId();
   const [mode, setMode] = useState<"auto" | "manual">(jilidSessionId ? "auto" : "manual");
   const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [jumlahTentorLakiLaki, setJumlahTentorLakiLaki] = useState("");
   const [jumlahTentorPerempuan, setJumlahTentorPerempuan] = useState("");
   const [status, setStatus] = useState<ProcessStatus>(jilidSessionId ? "ready" : "idle");
@@ -39,6 +40,7 @@ export function PembagianTentorSection({ jilidSessionId, jilidSessionLabel }: Pe
   const [inputResetKey, setInputResetKey] = useState(0);
 
   const isProcessing = status === "processing";
+  const hasFile = Boolean(file);
   const hasValidJumlahTentor =
     jumlahTentorLakiLaki.trim() !== "" &&
     jumlahTentorPerempuan.trim() !== "" &&
@@ -185,18 +187,51 @@ export function PembagianTentorSection({ jilidSessionId, jilidSessionLabel }: Pe
             </div>
           ) : (
             <label
-              className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-5 text-center transition ${
-                isProcessing ? "cursor-not-allowed opacity-60" : "hover:border-blue-400 hover:bg-blue-50"
+              className={`flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-5 text-center transition ${
+                isProcessing
+                  ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-60"
+                  : isDragging
+                    ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/20"
+                    : hasFile
+                      ? "border-emerald-300 bg-emerald-50/70 hover:border-emerald-400"
+                      : "border-slate-200 bg-slate-50 hover:border-blue-400 hover:bg-blue-50"
               }`}
               htmlFor={inputId}
+              onDragLeave={() => setIsDragging(false)}
+              onDragOver={(event) => {
+                event.preventDefault();
+                if (!isProcessing) setIsDragging(true);
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                setIsDragging(false);
+                if (isProcessing) return;
+                const droppedFile = event.dataTransfer.files?.[0] ?? null;
+                if (droppedFile) handleFileChange(droppedFile);
+              }}
             >
-              <UploadCloud className="text-blue-700" size={32} />
-              <p className="mt-2 text-sm font-semibold text-slate-700">
+              {hasFile ? (
+                <CheckCircle2 className="text-emerald-600" size={32} />
+              ) : (
+                <UploadCloud className="text-blue-700" size={32} />
+              )}
+              <p
+                className={`mt-2 max-w-full truncate px-2 text-sm font-semibold ${
+                  hasFile ? "text-emerald-800" : "text-slate-700"
+                }`}
+                title={file?.name}
+              >
                 {file?.name ?? "Upload file hasil Rekap Jilid"}
               </p>
-              <p className="mt-1 text-xs text-slate-500">Format .xlsx atau .xls</p>
-              <span className="mt-3 rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white">
-                Pilih File
+              <p className="mt-1 text-xs text-slate-500">
+                {hasFile ? "File siap diproses • Klik atau tarik untuk mengganti" : "Format .xlsx atau .xls"}
+              </p>
+              <span
+                className={`mt-3 rounded-lg px-4 py-2 text-xs font-bold text-white shadow-sm transition ${
+                  hasFile ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-700 hover:bg-blue-800"
+                }`}
+              >
+                {hasFile ? "Ganti File" : "Pilih File"}
               </span>
               <input
                 accept=".xlsx,.xls"

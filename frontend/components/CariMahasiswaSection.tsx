@@ -2,6 +2,7 @@
 
 import {
   AlertCircle,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -50,12 +51,14 @@ function CellValue({ value }: { value: string | undefined }) {
 export function CariMahasiswaSection() {
   const inputId = useId();
   const [files, setFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [index, setIndex] = useState<CariMahasiswaIndexResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [inputResetKey, setInputResetKey] = useState(0);
+  const hasFiles = files.length > 0;
 
   const trimmedQuery = query.trim();
   const results = useMemo(() => {
@@ -113,26 +116,59 @@ export function CariMahasiswaSection() {
       <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <div key={`cari-${inputResetKey}`}>
           <label
-            className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-5 text-center transition ${
-              loading ? "cursor-not-allowed opacity-60" : "hover:border-blue-400 hover:bg-blue-50"
+            className={`flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-5 text-center transition ${
+              loading
+                ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-60"
+                : isDragging
+                  ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/20"
+                  : hasFiles
+                    ? "border-emerald-300 bg-emerald-50/70 hover:border-emerald-400"
+                    : "border-slate-200 bg-slate-50 hover:border-blue-400 hover:bg-blue-50"
             }`}
             htmlFor={inputId}
+            onDragLeave={() => setIsDragging(false)}
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (!loading) setIsDragging(true);
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              setIsDragging(false);
+              if (loading) return;
+              const droppedFiles = Array.from(event.dataTransfer.files ?? []);
+              if (droppedFiles.length > 0) handleFileChange(droppedFiles);
+            }}
           >
             {loading ? (
               <LoaderCircle className="animate-spin text-blue-700" size={28} />
+            ) : hasFiles ? (
+              <CheckCircle2 className="text-emerald-600" size={28} />
             ) : (
               <UploadCloud className="text-blue-700" size={28} />
             )}
-            <p className="mt-2 break-all text-sm font-semibold text-slate-700">
+            <p
+              className={`mt-2 max-w-full truncate px-2 text-sm font-semibold ${
+                hasFiles ? "text-emerald-800" : "text-slate-700"
+              }`}
+              title={files.length === 1 ? files[0].name : undefined}
+            >
               {files.length === 0
                 ? "Upload file Excel"
                 : files.length === 1
                   ? files[0].name
                   : `${files.length} file dipilih`}
             </p>
-            <p className="mt-1 text-xs text-slate-500">Format .xlsx/.xls, minimal ada kolom NIM atau Nama</p>
-            <span className="mt-3 rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white">
-              {loading ? "Membaca..." : files.length > 0 ? "Ganti File" : "Pilih File"}
+            <p className="mt-1 text-xs text-slate-500">
+              {hasFiles
+                ? "Indeks siap dicari • Klik atau tarik untuk mengganti"
+                : "Format .xlsx/.xls, minimal ada kolom NIM atau Nama"}
+            </p>
+            <span
+              className={`mt-3 rounded-lg px-4 py-2 text-xs font-bold text-white shadow-sm transition ${
+                hasFiles ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-700 hover:bg-blue-800"
+              }`}
+            >
+              {loading ? "Membaca..." : hasFiles ? "Ganti File" : "Pilih File"}
             </span>
             <input
               accept=".xlsx,.xls"
