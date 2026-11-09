@@ -188,7 +188,7 @@ async def process_rekap_upload(
 ) -> dict:
     """Menjalankan business logic rekap legacy terhadap dua file Excel."""
     raw_peserta = await read_excel_upload(peserta_file, "peserta_file", reader=read_all_sheets)
-    raw_nilai = await read_excel_upload(nilai_file, "nilai_file")
+    raw_nilai = await read_excel_upload(nilai_file, "nilai_file", reader=read_all_sheets)
 
     peserta_df, missing_peserta = standardize_dataframe(
         raw_peserta,

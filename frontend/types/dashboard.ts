@@ -31,12 +31,13 @@ export type RekapRow = {
   prodi: string;
   kelas: string;
   jenisKelamin: string;
-  presensi: number;
-  bacaan: number;
-  hafalan: number;
-  evaluasi: number;
+  presensi: string;
+  bacaan: string;
+  hafalan: string;
+  evaluasi: string;
   total: string;
   abjad: string;
+  catatanValidasi?: string;
   status: "Sudah Ada Nilai" | "Belum Ada Nilai";
   validasi: "Valid" | "Perlu Dicek";
 };

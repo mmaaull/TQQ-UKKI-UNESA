@@ -21,11 +21,12 @@ PESERTA_REQUIRED_COLUMNS = [
 ]
 
 NILAI_REQUIRED_COLUMNS = [
-    "NAMA", "NIM", "PRESENSI", "BACAAN", "HAFALAN", "EVALUASI", "TOTAL NILAI", "ABJAD",
+    "NAMA", "NIM", "KODE KELAS PAI", "PROGRAM STUDI",
+    "PRESENSI", "BACAAN", "HAFALAN", "EVALUASI", "TOTAL NILAI", "ABJAD",
 ]
 
 PESERTA_COLUMN_ALIASES = {
-    "nama": ["Nama", "NAMA", "nama"],
+    "nama": ["Nama", "NAMA", "nama", "Nama Lengkap", "NAMA LENGKAP"],
     "jenis_kelamin": [
         "Jenis Kelamin", "JENIS KELAMIN", "jenis kelamin", "Gender", "GENDER",
         "L/P", "JK",
@@ -39,17 +40,26 @@ PESERTA_COLUMN_ALIASES = {
 }
 
 NILAI_COLUMN_ALIASES = {
-    "nama_nilai": ["NAMA", "Nama", "nama"],
-    "nim": ["NIM", "Nim", "nim", "NPM", "npm"],
-    "presensi": ["PRESENSI", "Presensi", "presensi", "Presensi Kehadiran"],
-    "bacaan": ["BACAAN", "Bacaan", "bacaan"],
-    "hafalan": ["HAFALAN", "Hafalan", "hafalan"],
+    "nama_nilai": ["NAMA", "Nama", "nama", "Nama Lengkap", "NAMA LENGKAP"],
+    "nim": ["NIM", "Nim", "nim", "NPM", "npm", "No Induk", "Nomor Induk"],
+    "kode_kelas_pai_nilai": [
+        "KODE KELAS PAI", "Kode Kelas PAI", "kode kelas pai",
+        "KELAS PAI", "Kelas PAI", "kelas pai",
+        "KODE PAI", "Kode PAI", "kode pai",
+    ],
+    "prodi_nilai": [
+        "PROGRAM STUDI", "Program Studi", "program studi",
+        "PRODI", "Prodi", "prodi",
+    ],
+    "presensi": ["PRESENSI", "Presensi", "presensi", "Presensi Kehadiran", "KEHADIRAN", "Kehadiran"],
+    "bacaan": ["BACAAN", "Bacaan", "bacaan", "NGAJI", "Ngaji", "ngaji"],
+    "hafalan": ["HAFALAN", "Hafalan", "hafalan", "PENUGASAN", "Penugasan", "penugasan"],
     "evaluasi": ["EVALUASI", "Evaluasi", "evaluasi"],
     "total_nilai": [
         "TOTAL NILAI", "Total Nilai", "total nilai", "TOTAL_NILAI", "total_nilai",
-        "TOTAL", "Total", "total",
+        "TOTAL", "Total", "total", "Nilai Akhir", "NILAI AKHIR",
     ],
-    "abjad": ["ABJAD", "Abjad", "abjad", "Huruf", "HURUF", "huruf"],
+    "abjad": ["ABJAD", "Abjad", "abjad", "Huruf", "HURUF", "huruf", "Nilai Huruf", "NILAI HURUF", "Grade", "GRADE"],
 }
 
 REKAP_COLUMN_ALIASES = {
@@ -68,14 +78,18 @@ REKAP_INTERNAL_COLUMNS = {
 
 FINAL_COLUMNS = [
     "nama", "jenis_kelamin", "nim", "prodi", "kode_kelas_pai",
-    "nama_nilai", "presensi", "bacaan", "hafalan", "evaluasi", "total_nilai", "abjad",
+    "nama_nilai", "kode_kelas_pai_nilai", "prodi_nilai",
+    "presensi", "bacaan", "hafalan", "evaluasi", "total_nilai", "abjad",
     "status_nilai", "status_validasi", "catatan_validasi",
 ]
 
 FINAL_COLUMN_LABELS = {
     "nama": "Nama", "jenis_kelamin": "Jenis Kelamin", "nim": "NIM", "prodi": "Prodi",
     "kode_kelas_pai": "Kode Kelas PAI",
-    "nama_nilai": "Nama dari File Nilai", "presensi": "Presensi", "bacaan": "Bacaan",
+    "nama_nilai": "Nama dari File Nilai",
+    "kode_kelas_pai_nilai": "Kode Kelas PAI dari File Nilai",
+    "prodi_nilai": "Program Studi dari File Nilai",
+    "presensi": "Presensi", "bacaan": "Bacaan",
     "hafalan": "Hafalan", "evaluasi": "Evaluasi", "total_nilai": "Total Nilai", "abjad": "Abjad",
     "status_nilai": "Status Nilai", "status_validasi": "Status Validasi",
     "catatan_validasi": "Catatan Validasi",
@@ -94,8 +108,13 @@ EXPORT_PER_KELAS_COLUMN_LABELS = {
 }
 
 PROBLEM_TYPE_ORDER = [
-    "NIM di file nilai tidak ada di file peserta", "Abjad kosong", "Total Nilai kosong",
-    "Nama berbeda antara file peserta dan file nilai", "NIM duplikat di file nilai",
+    "NIM di file nilai tidak ada di file peserta",
+    "Abjad kosong",
+    "Total Nilai kosong",
+    "Nama berbeda antara file peserta dan file nilai",
+    "Kode Kelas PAI berbeda antara file peserta dan file nilai",
+    "Program Studi berbeda antara file peserta dan file nilai",
+    "NIM duplikat di file nilai",
     "Nilai tidak valid atau di luar rentang",
 ]
 

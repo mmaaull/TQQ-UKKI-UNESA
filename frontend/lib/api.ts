@@ -32,7 +32,9 @@ function valueOf(record: ApiRecord, keys: string[]): string | number | boolean |
 
 function textOf(record: ApiRecord, keys: string[]): string {
   const value = valueOf(record, keys);
-  return value === null || value === undefined ? "-" : String(value);
+  if (value === null || value === undefined) return "-";
+  const text = String(value).trim();
+  return text === "" ? "-" : text;
 }
 
 function numberOf(record: ApiRecord, keys: string[]): number {
@@ -65,7 +67,24 @@ export async function processRekap(pesertaFile: File, nilaiFile: File): Promise<
       const body: unknown = await response.json();
       if (typeof body === "object" && body !== null && "detail" in body) {
         const detail = body.detail;
-        message = typeof detail === "string" ? detail : JSON.stringify(detail);
+        if (typeof detail === "string") {
+          message = detail;
+        } else if (typeof detail === "object" && detail !== null) {
+          const detailObj = detail as {
+            message?: string;
+            peserta?: string[];
+            nilai?: string[];
+          };
+          const parts: string[] = [];
+          if (detailObj.message) parts.push(detailObj.message);
+          if (Array.isArray(detailObj.peserta) && detailObj.peserta.length > 0) {
+            parts.push(`File Peserta kurang kolom: ${detailObj.peserta.join(", ")}`);
+          }
+          if (Array.isArray(detailObj.nilai) && detailObj.nilai.length > 0) {
+            parts.push(`File Nilai kurang kolom: ${detailObj.nilai.join(", ")}`);
+          }
+          message = parts.length > 0 ? parts.join(" ") : JSON.stringify(detail);
+        }
       }
     } catch {
       // Gunakan pesan default jika response error bukan JSON.
@@ -227,7 +246,24 @@ export async function processTentor(
       const body: unknown = await response.json();
       if (typeof body === "object" && body !== null && "detail" in body) {
         const detail = body.detail;
-        message = typeof detail === "string" ? detail : JSON.stringify(detail);
+        if (typeof detail === "string") {
+          message = detail;
+        } else if (typeof detail === "object" && detail !== null) {
+          const detailObj = detail as {
+            message?: string;
+            peserta?: string[];
+            nilai?: string[];
+          };
+          const parts: string[] = [];
+          if (detailObj.message) parts.push(detailObj.message);
+          if (Array.isArray(detailObj.peserta) && detailObj.peserta.length > 0) {
+            parts.push(`File Peserta kurang kolom: ${detailObj.peserta.join(", ")}`);
+          }
+          if (Array.isArray(detailObj.nilai) && detailObj.nilai.length > 0) {
+            parts.push(`File Nilai kurang kolom: ${detailObj.nilai.join(", ")}`);
+          }
+          message = parts.length > 0 ? parts.join(" ") : JSON.stringify(detail);
+        }
       }
     } catch {
       // Gunakan pesan default jika response error bukan JSON.
@@ -255,7 +291,24 @@ export async function processTentorFromJilidSession(
       const body: unknown = await response.json();
       if (typeof body === "object" && body !== null && "detail" in body) {
         const detail = body.detail;
-        message = typeof detail === "string" ? detail : JSON.stringify(detail);
+        if (typeof detail === "string") {
+          message = detail;
+        } else if (typeof detail === "object" && detail !== null) {
+          const detailObj = detail as {
+            message?: string;
+            peserta?: string[];
+            nilai?: string[];
+          };
+          const parts: string[] = [];
+          if (detailObj.message) parts.push(detailObj.message);
+          if (Array.isArray(detailObj.peserta) && detailObj.peserta.length > 0) {
+            parts.push(`File Peserta kurang kolom: ${detailObj.peserta.join(", ")}`);
+          }
+          if (Array.isArray(detailObj.nilai) && detailObj.nilai.length > 0) {
+            parts.push(`File Nilai kurang kolom: ${detailObj.nilai.join(", ")}`);
+          }
+          message = parts.length > 0 ? parts.join(" ") : JSON.stringify(detail);
+        }
       }
     } catch {
       // Gunakan pesan default jika response error bukan JSON.
@@ -288,7 +341,24 @@ export async function buildCariMahasiswaIndex(files: File[]): Promise<CariMahasi
       const body: unknown = await response.json();
       if (typeof body === "object" && body !== null && "detail" in body) {
         const detail = body.detail;
-        message = typeof detail === "string" ? detail : JSON.stringify(detail);
+        if (typeof detail === "string") {
+          message = detail;
+        } else if (typeof detail === "object" && detail !== null) {
+          const detailObj = detail as {
+            message?: string;
+            peserta?: string[];
+            nilai?: string[];
+          };
+          const parts: string[] = [];
+          if (detailObj.message) parts.push(detailObj.message);
+          if (Array.isArray(detailObj.peserta) && detailObj.peserta.length > 0) {
+            parts.push(`File Peserta kurang kolom: ${detailObj.peserta.join(", ")}`);
+          }
+          if (Array.isArray(detailObj.nilai) && detailObj.nilai.length > 0) {
+            parts.push(`File Nilai kurang kolom: ${detailObj.nilai.join(", ")}`);
+          }
+          message = parts.length > 0 ? parts.join(" ") : JSON.stringify(detail);
+        }
       }
     } catch {
       // Gunakan pesan default jika response error bukan JSON.
@@ -323,12 +393,13 @@ export function mapRekapRows(records: ApiRecord[]): RekapRow[] {
     prodi: textOf(record, ["prodi", "Prodi"]),
     kelas: textOf(record, ["kode_kelas_pai", "Kode Kelas PAI", "kelas_umum", "Kelas"]),
     jenisKelamin: textOf(record, ["jenis_kelamin", "Jenis Kelamin"]),
-    presensi: numberOf(record, ["presensi", "Presensi"]),
-    bacaan: numberOf(record, ["bacaan", "Bacaan"]),
-    hafalan: numberOf(record, ["hafalan", "Hafalan"]),
-    evaluasi: numberOf(record, ["evaluasi", "Evaluasi"]),
+    presensi: textOf(record, ["presensi", "Presensi"]),
+    bacaan: textOf(record, ["bacaan", "Bacaan"]),
+    hafalan: textOf(record, ["hafalan", "HAFALAN", "Hafalan"]),
+    evaluasi: textOf(record, ["evaluasi", "Evaluasi"]),
     total: textOf(record, ["total_nilai", "Total Nilai"]),
     abjad: textOf(record, ["abjad", "Abjad"]),
+    catatanValidasi: textOf(record, ["catatan_validasi", "Catatan Validasi"]),
     status: textOf(record, ["status_nilai", "Status Nilai"]) === "Sudah Ada Nilai" ? "Sudah Ada Nilai" : "Belum Ada Nilai",
     validasi: textOf(record, ["status_validasi", "Status Validasi"]) === "Valid" ? "Valid" : "Perlu Dicek",
   }));
@@ -352,7 +423,16 @@ export function mapClassProgress(records: ApiRecord[]): ClassProgressDatum[] {
   });
 }
 
-const problemColors = ["#ef4444", "#f97316", "#eab308", "#8b5cf6", "#3b82f6"];
+const problemColors = [
+  "#ef4444",
+  "#f97316",
+  "#eab308",
+  "#8b5cf6",
+  "#3b82f6",
+  "#ec4899",
+  "#14b8a6",
+  "#6366f1",
+];
 
 export function mapValidationItems(records: ApiRecord[]): ChartDatum[] {
   return records.map((record, index) => ({

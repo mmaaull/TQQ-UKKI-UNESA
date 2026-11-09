@@ -66,6 +66,33 @@ def normalize_gender(value: Any) -> str:
     return ""
 
 
+_NIM_HEADER_ALIASES = {"nim", "npm", "no induk", "nomor induk"}
+
+
+def _extract_sheet_with_header(sheet: pd.DataFrame) -> pd.DataFrame:
+    """Ambil isi sheet; jika baris pertama bukan header, cari baris header yang memuat NIM."""
+    cleaned = sheet.dropna(how="all")
+    if cleaned.empty:
+        return pd.DataFrame()
+
+    col_headers = {normalize_header(col) for col in cleaned.columns}
+    if col_headers & _NIM_HEADER_ALIASES:
+        return cleaned
+
+    max_scan = min(len(cleaned), 30)
+    for idx in range(max_scan):
+        row_values = {normalize_header(val) for val in cleaned.iloc[idx].tolist()}
+        if row_values & _NIM_HEADER_ALIASES:
+            body = cleaned.iloc[idx + 1 :].dropna(how="all").copy()
+            body.columns = [
+                str(val).strip() if not pd.isna(val) else f"Unnamed: {i}"
+                for i, val in enumerate(cleaned.iloc[idx].tolist())
+            ]
+            return body
+
+    return cleaned
+
+
 def read_all_sheets(uploaded_file) -> pd.DataFrame:
     """Membaca seluruh sheet Excel/CSV lalu menggabungkan baris yang tidak kosong."""
     filename = uploaded_file.name.lower()
@@ -77,11 +104,16 @@ def read_all_sheets(uploaded_file) -> pd.DataFrame:
 
     uploaded_file.seek(0)
     sheets = pd.read_excel(uploaded_file, sheet_name=None, dtype=str)
-    frames = [sheet.dropna(how="all") for sheet in sheets.values()]
+    frames = [_extract_sheet_with_header(sheet) for sheet in sheets.values()]
     frames = [frame for frame in frames if not frame.empty]
     if not frames:
         return pd.DataFrame()
     return pd.concat(frames, ignore_index=True, sort=False)
+
+
+def normalize_kelas_for_compare(value: Any) -> str:
+    text = normalize_text(value).lower()
+    return re.sub(r"[^a-z0-9]", "", text)
 
 
 def normalize_name_for_compare(value: Any) -> str:

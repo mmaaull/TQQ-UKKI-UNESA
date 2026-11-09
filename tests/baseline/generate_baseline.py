@@ -39,16 +39,25 @@ def ensure_input_fixtures() -> None:
         ], columns=["Nama", "Jenis Kelamin", "NIM", "Kelas PAI", "Program Studi"])
         peserta.to_excel(PESERTA_FILE, index=False)
 
-    if not NILAI_FILE.exists():
+    nilai_columns = [
+        "NAMA", "NIM", "KODE KELAS PAI", "PROGRAM STUDI",
+        "PRESENSI", "BACAAN", "HAFALAN", "EVALUASI", "TOTAL NILAI", "ABJAD",
+    ]
+    need_nilai = not NILAI_FILE.exists()
+    if not need_nilai:
+        existing_cols = list(pd.read_excel(NILAI_FILE, nrows=0).columns)
+        need_nilai = existing_cols != nilai_columns
+
+    if need_nilai:
         nilai = pd.DataFrame([
-            ["Alya Putri", "240001", "90", "88", "87", "92", "89", "A"],
-            ["Bagas Pratama", "240002", "", "", "", "", "", ""],
-            ["Siti Rahma", "240003", "105", "80", "85", "90", "90", "A"],
-            ["Deni Saputra", "240004", "65", "70", "75", "80", "72", "C"],
-            ["Deni Saputra", "240004", "75", "80", "85", "90", "82", "B"],
-            ["Eka Wulandari", "240005", "90", "90", "90", "90", "N/A", "B"],
-            ["Peserta Tidak Terdaftar", "249999", "80", "80", "80", "80", "80", "B"],
-        ], columns=["NAMA", "NIM", "PRESENSI", "BACAAN", "HAFALAN", "EVALUASI", "TOTAL NILAI", "ABJAD"])
+            ["Alya Putri", "240001", "1A", "Teknik Informatika", "90", "88", "87", "92", "89", "A"],
+            ["Bagas Pratama", "240002", "1A", "Teknik Informatika", "", "", "", "", "", ""],
+            ["Siti Rahma", "240003", "2B", "Sistem Informasi", "105", "80", "85", "90", "90", "A"],
+            ["Deni Saputra", "240004", "2B", "Sistem Informasi", "65", "70", "75", "80", "72", "C"],
+            ["Deni Saputra", "240004", "2B", "Sistem Informasi", "75", "80", "85", "90", "82", "B"],
+            ["Eka Wulandari", "240005", "10A", "Manajemen", "90", "90", "90", "90", "N/A", "B"],
+            ["Peserta Tidak Terdaftar", "249999", "9Z", "Akuntansi", "80", "80", "80", "80", "80", "B"],
+        ], columns=nilai_columns)
         nilai.to_excel(NILAI_FILE, index=False)
 
 

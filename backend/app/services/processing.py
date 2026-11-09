@@ -15,7 +15,11 @@ from backend.app.utils.helpers import (
     name_similarity,
     natural_sort_kelas_key,
     normalize_gender,
+    normalize_header,
+    normalize_kelas_for_compare,
+    normalize_name_for_compare,
     normalize_nim,
+    normalize_text,
 )
 
 
@@ -23,8 +27,16 @@ def canonical_to_required_label(canonical_name: str, file_type: str) -> str:
     if file_type == "peserta":
         return FINAL_COLUMN_LABELS.get(canonical_name, canonical_name)
     label_map = {
-        "nama_nilai": "NAMA", "nim": "NIM", "presensi": "PRESENSI", "bacaan": "BACAAN",
-        "hafalan": "HAFALAN", "evaluasi": "EVALUASI", "total_nilai": "TOTAL NILAI", "abjad": "ABJAD",
+        "nama_nilai": "NAMA",
+        "nim": "NIM",
+        "kode_kelas_pai_nilai": "KODE KELAS PAI",
+        "prodi_nilai": "PROGRAM STUDI",
+        "presensi": "PRESENSI",
+        "bacaan": "BACAAN",
+        "hafalan": "HAFALAN",
+        "evaluasi": "EVALUASI",
+        "total_nilai": "TOTAL NILAI",
+        "abjad": "ABJAD",
     }
     return label_map.get(canonical_name, canonical_name)
 
@@ -41,6 +53,9 @@ def standardize_dataframe(df: pd.DataFrame, aliases: Dict[str, List[str]], file_
 
     if "nim" in standardized.columns:
         standardized["nim"] = standardized["nim"].apply(normalize_nim)
+        standardized = standardized[
+            ~standardized["nim"].apply(lambda x: normalize_header(x) in {"nim", "npm", "no induk", "nomor induk"})
+        ].copy()
 
     for col in standardized.columns:
         if col != "nim":
@@ -61,6 +76,12 @@ def read_uploaded_file(uploaded_file) -> pd.DataFrame:
 def process_rekap(peserta_df: pd.DataFrame, nilai_df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
     peserta_clean = peserta_df.dropna(how="all").copy()
     nilai_clean = nilai_df.dropna(how="all").copy()
+
+    for col in ("kode_kelas_pai_nilai", "prodi_nilai"):
+        if col not in nilai_clean.columns:
+            nilai_clean[col] = ""
+        else:
+            nilai_clean[col] = nilai_clean[col].apply(normalize_text)
 
     peserta_clean["nim"] = peserta_clean["nim"].apply(normalize_nim)
     nilai_clean["nim"] = nilai_clean["nim"].apply(normalize_nim)
@@ -89,11 +110,31 @@ def process_rekap(peserta_df: pd.DataFrame, nilai_df: pd.DataFrame) -> Dict[str,
         lambda row: (not is_blank(row.get("nama_nilai", ""))) and row.get("kemiripan_nama", 1.0) < 0.88,
         axis=1,
     )
+    rekap["kelas_berbeda"] = rekap.apply(
+        lambda row: (
+            not is_blank(row.get("kode_kelas_pai_nilai", ""))
+            and normalize_kelas_for_compare(row.get("kode_kelas_pai", ""))
+            != normalize_kelas_for_compare(row.get("kode_kelas_pai_nilai", ""))
+        ),
+        axis=1,
+    )
+    rekap["prodi_berbeda"] = rekap.apply(
+        lambda row: (
+            not is_blank(row.get("prodi_nilai", ""))
+            and normalize_name_for_compare(row.get("prodi", ""))
+            != normalize_name_for_compare(row.get("prodi_nilai", ""))
+        ),
+        axis=1,
+    )
 
     def validation_notes(row: pd.Series) -> str:
         notes: List[str] = []
         if bool(row.get("nama_berbeda", False)):
             notes.append("Nama berbeda")
+        if bool(row.get("kelas_berbeda", False)):
+            notes.append("Kode Kelas PAI berbeda")
+        if bool(row.get("prodi_berbeda", False)):
+            notes.append("Program Studi berbeda")
         if is_blank(row.get("abjad", "")):
             notes.append("Abjad kosong")
         if is_blank(row.get("total_nilai", "")):

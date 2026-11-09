@@ -165,7 +165,7 @@ export default function RekapNilaiPage() {
             key={`nilai-${uploadResetKey}`}
             kind="nilai"
             title="File Nilai"
-            description="Upload file nilai peserta sesuai format"
+            description="Kolom: NAMA, NIM, KODE KELAS PAI, PROGRAM STUDI, PRESENSI, BACAAN, HAFALAN, EVALUASI, TOTAL NILAI, ABJAD"
             onFileChange={(file) => setSelectedFile("nilai", file)}
           />
           <ProcessCard

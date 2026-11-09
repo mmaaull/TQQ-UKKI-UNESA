@@ -66,7 +66,17 @@ def build_problem_table(
     problems: List[Dict[str, Any]] = []
 
     for _, row in unmatched_nilai.iterrows():
-        add_problem(problems, "File Nilai", "NIM di file nilai tidak ada di file peserta", row.get("nim", ""), "", row.get("nama_nilai", ""), "", "", "Ada nilai untuk NIM ini, tetapi NIM tidak ditemukan di file peserta.")
+        add_problem(
+            problems,
+            "File Nilai",
+            "NIM di file nilai tidak ada di file peserta",
+            row.get("nim", ""),
+            "",
+            row.get("nama_nilai", ""),
+            row.get("kode_kelas_pai_nilai", ""),
+            "",
+            "Ada nilai untuk NIM ini, tetapi NIM tidak ditemukan di file peserta.",
+        )
 
     for _, row in rekap[rekap["abjad"].apply(is_blank)].iterrows():
         add_problem(problems, "File Nilai", "Abjad kosong", row.get("nim", ""), row.get("nama", ""), row.get("nama_nilai", ""), row.get("kode_kelas_pai", ""), row.get("jenis_kelamin", ""), "Kolom ABJAD kosong atau peserta belum ditemukan di file nilai.")
@@ -77,9 +87,55 @@ def build_problem_table(
     for _, row in rekap[rekap["nama_berbeda"].fillna(False)].iterrows():
         add_problem(problems, "Gabungan Peserta + Nilai", "Nama berbeda antara file peserta dan file nilai", row.get("nim", ""), row.get("nama", ""), row.get("nama_nilai", ""), row.get("kode_kelas_pai", ""), row.get("jenis_kelamin", ""), f"Kemiripan nama sekitar {row.get('kemiripan_nama', 0):.0%}. Perlu dicek manual.")
 
+    if "kelas_berbeda" in rekap.columns:
+        for _, row in rekap[rekap["kelas_berbeda"].fillna(False)].iterrows():
+            kelas_peserta = normalize_text(row.get("kode_kelas_pai", ""))
+            kelas_nilai = normalize_text(row.get("kode_kelas_pai_nilai", ""))
+            add_problem(
+                problems,
+                "Gabungan Peserta + Nilai",
+                "Kode Kelas PAI berbeda antara file peserta dan file nilai",
+                row.get("nim", ""),
+                row.get("nama", ""),
+                row.get("nama_nilai", ""),
+                kelas_peserta,
+                row.get("jenis_kelamin", ""),
+                f"Kode Kelas PAI di file peserta '{kelas_peserta}' berbeda dengan di file nilai '{kelas_nilai}'. Perlu dicek manual.",
+                kolom="KODE KELAS PAI",
+                nilai_terdeteksi=kelas_nilai,
+            )
+
+    if "prodi_berbeda" in rekap.columns:
+        for _, row in rekap[rekap["prodi_berbeda"].fillna(False)].iterrows():
+            prodi_peserta = normalize_text(row.get("prodi", ""))
+            prodi_nilai = normalize_text(row.get("prodi_nilai", ""))
+            add_problem(
+                problems,
+                "Gabungan Peserta + Nilai",
+                "Program Studi berbeda antara file peserta dan file nilai",
+                row.get("nim", ""),
+                row.get("nama", ""),
+                row.get("nama_nilai", ""),
+                row.get("kode_kelas_pai", ""),
+                row.get("jenis_kelamin", ""),
+                f"Program Studi di file peserta '{prodi_peserta}' berbeda dengan di file nilai '{prodi_nilai}'. Perlu dicek manual.",
+                kolom="PROGRAM STUDI",
+                nilai_terdeteksi=prodi_nilai,
+            )
+
     duplicate_nilai = nilai_df[nilai_df["nim"].ne("") & nilai_df["nim"].duplicated(keep=False)]
     for _, row in duplicate_nilai.iterrows():
-        add_problem(problems, "File Nilai", "NIM duplikat di file nilai", row.get("nim", ""), "", row.get("nama_nilai", ""), "", "", "NIM muncul lebih dari sekali di file nilai. Sistem memakai data terakhir saat rekap.")
+        add_problem(
+            problems,
+            "File Nilai",
+            "NIM duplikat di file nilai",
+            row.get("nim", ""),
+            "",
+            row.get("nama_nilai", ""),
+            row.get("kode_kelas_pai_nilai", ""),
+            "",
+            "NIM muncul lebih dari sekali di file nilai. Sistem memakai data terakhir saat rekap.",
+        )
 
     for _, row in rekap.iterrows():
         for col, config in SCORE_RANGE_CONFIG.items():

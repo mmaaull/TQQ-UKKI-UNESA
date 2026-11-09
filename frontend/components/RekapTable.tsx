@@ -195,6 +195,11 @@ export function RekapTable({ rows, title = "Preview Hasil Rekap", subtitle }: Re
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span
+                          title={
+                            row.catatanValidasi && row.catatanValidasi !== "-"
+                              ? row.catatanValidasi
+                              : undefined
+                          }
                           className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-bold ${
                             row.validasi === "Valid"
                               ? "border-emerald-300 bg-emerald-50 text-emerald-700"
