@@ -45,7 +45,8 @@ export type RekapRow = {
 export type ProcessStatus = "idle" | "ready" | "processing" | "success" | "error";
 
 export type ExportStatus = "idle" | "downloading" | "success" | "error";
-export type ExportKind = "final" | "validasi" | "data-bermasalah" | "per-kelas" | "template";
+export type ExportKind = "final" | "final-per-prodi" | "validasi" | "data-bermasalah" | "per-kelas" | "template";
+export type RekapGroupBy = "kode_kelas_pai" | "prodi";
 
 export type Summary = {
   total_peserta: number;

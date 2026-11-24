@@ -24,7 +24,7 @@ import {
   processRekap,
 } from "@/lib/api";
 import { workflowSteps } from "@/lib/workflow";
-import type { ProcessStatus, RekapProcessResponse, Summary } from "@/types/dashboard";
+import type { ProcessStatus, RekapGroupBy, RekapProcessResponse, Summary } from "@/types/dashboard";
 
 const emptySummary: Summary = {
   total_peserta: 0,
@@ -50,6 +50,7 @@ export default function RekapNilaiPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [processedAt, setProcessedAt] = useState("");
   const [uploadResetKey, setUploadResetKey] = useState(0);
+  const [groupBy, setGroupBy] = useState<RekapGroupBy>("kode_kelas_pai");
 
   const [isClassDetailOpen, setIsClassDetailOpen] = useState(false);
 
@@ -231,6 +232,8 @@ export default function RekapNilaiPage() {
             </section>
 
             <RekapTable
+              groupBy={groupBy}
+              onGroupByChange={setGroupBy}
               rows={rekapRows}
               subtitle={`Menampilkan ${rekapRows.length} data hasil rekap`}
             />
@@ -249,7 +252,7 @@ export default function RekapNilaiPage() {
           </section>
         )}
 
-        <ExportSection sessionId={sessionId} />
+        <ExportSection groupBy={groupBy} onGroupByChange={setGroupBy} sessionId={sessionId} />
 
         <RapikanSection />
       </main>

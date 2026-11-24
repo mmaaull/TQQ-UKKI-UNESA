@@ -77,7 +77,7 @@ const guideTabs: Record<
         step: "5",
         title: "Export & Mode Rapikan",
         description:
-          "Unduh hasil rekap Excel final, laporan validasi, arsip ZIP per kelas, atau gunakan 'Rapikan Hasil Rekap' untuk memisahkan sheet per kelas & prodi.",
+          "Pilih Excel final per Kode Kelas PAI atau Prodi (setiap sheet urut NIM), unduh laporan validasi atau arsip ZIP per kelas, dan gunakan 'Rapikan Hasil Rekap' bila diperlukan.",
         icon: Download,
         color: "bg-sky-50 text-sky-600 border-sky-100",
       },

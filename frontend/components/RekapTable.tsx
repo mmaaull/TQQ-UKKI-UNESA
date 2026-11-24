@@ -3,11 +3,11 @@
 import { ArrowLeft, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import type { RekapRow } from "@/types/dashboard";
+import type { RekapGroupBy, RekapRow } from "@/types/dashboard";
 
 import { FilterBar } from "./FilterBar";
 
-export type RekapTableProps = { rows: RekapRow[]; title?: string; subtitle?: string };
+export type RekapTableProps = { rows: RekapRow[]; groupBy: RekapGroupBy; onGroupByChange: (value: RekapGroupBy) => void; title?: string; subtitle?: string };
 
 const columns = [
   "No",
@@ -28,7 +28,7 @@ const columns = [
 
 const ITEMS_PER_PAGE = 10;
 
-export function RekapTable({ rows, title = "Preview Hasil Rekap", subtitle }: RekapTableProps) {
+export function RekapTable({ rows, groupBy, onGroupByChange, title = "Preview Hasil Rekap", subtitle }: RekapTableProps) {
   const [search, setSearch] = useState("");
   const [kelas, setKelas] = useState("");
   const [prodi, setProdi] = useState("");
@@ -58,13 +58,18 @@ export function RekapTable({ rows, title = "Preview Hasil Rekap", subtitle }: Re
         (!prodi || row.prodi === prodi) &&
         (!statusNilai || row.status === statusNilai) &&
         (!statusValidasi || row.validasi === statusValidasi)
-    );
-  }, [kelas, prodi, rows, search, statusNilai, statusValidasi]);
+    ).sort((left, right) => {
+      const leftGroup = groupBy === "prodi" ? left.prodi : left.kelas;
+      const rightGroup = groupBy === "prodi" ? right.prodi : right.kelas;
+      const groupOrder = leftGroup.localeCompare(rightGroup, "id-ID", { numeric: true });
+      return groupOrder || (left.nim < right.nim ? -1 : left.nim > right.nim ? 1 : 0);
+    });
+  }, [kelas, groupBy, prodi, rows, search, statusNilai, statusValidasi]);
 
   // Reset ke halaman 1 saat filter/pencarian berubah
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, kelas, prodi, statusNilai, statusValidasi]);
+  }, [search, kelas, prodi, statusNilai, statusValidasi, groupBy]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / ITEMS_PER_PAGE));
   const validPage = Math.min(currentPage, totalPages);
@@ -107,6 +112,13 @@ export function RekapTable({ rows, title = "Preview Hasil Rekap", subtitle }: Re
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <label className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-700">
+              Urut per
+              <select className="bg-transparent text-xs outline-none" onChange={(event) => onGroupByChange(event.target.value as RekapGroupBy)} value={groupBy}>
+                <option value="kode_kelas_pai">Kode Kelas PAI, lalu NIM</option>
+                <option value="prodi">Prodi, lalu NIM</option>
+              </select>
+            </label>
             <FilterBar
               kelasOptions={kelasOptions}
               onKelasChange={setKelas}
