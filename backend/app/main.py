@@ -20,6 +20,7 @@ from backend.app.services.excel_service import (
     create_template_excel,
     export_data_bermasalah_excel,
     export_excel,
+    export_excel_per_prodi,
     export_laporan_validasi_excel,
     export_per_kelas_zip,
 )
@@ -594,6 +595,17 @@ def export_final(session_id: str) -> Response:
         export_excel,
         get_session_results(session_id),
         "hasil_rekap_tqq_akbar_per_kode_kelas_pai.xlsx",
+        EXCEL_MEDIA_TYPE,
+    )
+
+
+@app.get("/api/export/{session_id}/final-per-prodi")
+def export_final_per_prodi(session_id: str) -> Response:
+    """Download Excel final per Prodi dari session rekap."""
+    return export_download(
+        export_excel_per_prodi,
+        get_session_results(session_id),
+        "hasil_rekap_tqq_akbar_per_prodi.xlsx",
         EXCEL_MEDIA_TYPE,
     )
 

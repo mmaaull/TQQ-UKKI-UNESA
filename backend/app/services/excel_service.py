@@ -2,7 +2,7 @@
 
 import zipfile
 from io import BytesIO
-from typing import Dict
+from typing import Dict, Literal
 
 import pandas as pd
 
@@ -46,8 +46,8 @@ def reorder_export_per_kelas(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def export_excel(results: Dict[str, pd.DataFrame], include_per_kelas: bool = True) -> bytes:
-    """Export utama: 1 file Excel berisi banyak sheet per Kode Kelas PAI."""
+def _export_excel_grouped(results: Dict[str, pd.DataFrame], group_by: Literal["kode_kelas_pai", "prodi"]) -> bytes:
+    """Export satu sheet per kelompok dengan isi setiap sheet terurut NIM."""
     output = BytesIO()
     rekap = results["rekap"].copy()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
@@ -55,9 +55,10 @@ def export_excel(results: Dict[str, pd.DataFrame], include_per_kelas: bool = Tru
             pd.DataFrame(columns=list(EXPORT_PER_KELAS_COLUMN_LABELS.values())).to_excel(writer, sheet_name="Data Kosong", index=False)
         else:
             used_sheet_names = set()
-            for kelas, group in rekap.groupby("kode_kelas_pai", dropna=False, sort=False):
-                kelas_label = "Tanpa Kelas" if is_blank(kelas) else str(kelas).strip()
-                base_sheet_name = safe_sheet_name(kelas_label)
+            for value, group in rekap.groupby(group_by, dropna=False, sort=group_by == "prodi"):
+                fallback = "Tanpa Kelas" if group_by == "kode_kelas_pai" else "Tanpa Prodi"
+                group_label = fallback if is_blank(value) else str(value).strip()
+                base_sheet_name = safe_sheet_name(group_label)
                 sheet_name = base_sheet_name
                 counter = 2
                 while sheet_name in used_sheet_names:
@@ -65,8 +66,19 @@ def export_excel(results: Dict[str, pd.DataFrame], include_per_kelas: bool = Tru
                     sheet_name = safe_sheet_name(base_sheet_name[: 31 - len(suffix)] + suffix)
                     counter += 1
                 used_sheet_names.add(sheet_name)
-                reorder_export_per_kelas(group).to_excel(writer, sheet_name=sheet_name, index=False)
+                sorted_group = group.sort_values(by="nim", kind="stable")
+                reorder_export_per_kelas(sorted_group).to_excel(writer, sheet_name=sheet_name, index=False)
     return output.getvalue()
+
+
+def export_excel(results: Dict[str, pd.DataFrame], include_per_kelas: bool = True) -> bytes:
+    """Export utama: satu file Excel berisi sheet per Kode Kelas PAI."""
+    return _export_excel_grouped(results, "kode_kelas_pai")
+
+
+def export_excel_per_prodi(results: Dict[str, pd.DataFrame]) -> bytes:
+    """Export alternatif: satu file Excel berisi sheet per Prodi."""
+    return _export_excel_grouped(results, "prodi")
 
 
 def export_data_bermasalah_excel(results: Dict[str, pd.DataFrame]) -> bytes:

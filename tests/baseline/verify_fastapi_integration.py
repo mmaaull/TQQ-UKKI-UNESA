@@ -96,6 +96,19 @@ def main() -> int:
                 differences = compare_excel(EXPECTED_DIR / filename, export_response.content)
             passed &= report(f"FastAPI {label}", differences)
 
+        per_prodi = client.get(f"/api/export/{payload['session_id']}/final-per-prodi")
+        prodi_differences = [] if per_prodi.status_code == 200 else [per_prodi.text]
+        if not prodi_differences:
+            with pd.ExcelFile(BytesIO(per_prodi.content)) as book:
+                expected_prodi = {str(row["prodi"]) for row in payload["rekap"]}
+                if set(book.sheet_names) != expected_prodi:
+                    prodi_differences.append(f"Sheet Prodi: {book.sheet_names}; expected: {sorted(expected_prodi)}")
+                for sheet_name in book.sheet_names:
+                    sheet = pd.read_excel(book, sheet_name=sheet_name, dtype=str)
+                    if sheet["NIM"].tolist() != sorted(sheet["NIM"].tolist()):
+                        prodi_differences.append(f"NIM tidak urut pada sheet {sheet_name}")
+        passed &= report("FastAPI export final per Prodi", prodi_differences)
+
         per_kelas = client.get(f"/api/export/{payload['session_id']}/per-kelas")
         passed &= report(
             "FastAPI export per kelas",
