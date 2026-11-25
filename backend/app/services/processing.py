@@ -8,7 +8,7 @@ from backend.app.core.config import (
     FINAL_COLUMN_LABELS,
     PROBLEM_TYPE_ORDER,
 )
-from backend.app.services.validation import build_problem_table, get_score_range_notes
+from backend.app.services.validation import build_problem_table
 from backend.app.utils.prodi import canonical_prodi_map
 from backend.app.utils.helpers import (
     detect_column_mapping,
@@ -100,13 +100,40 @@ def process_rekap(peserta_df: pd.DataFrame, nilai_df: pd.DataFrame) -> Dict[str,
     nilai_for_merge = nilai_clean[nilai_clean["nim"].ne("")].copy()
 
     peserta_unique = peserta_for_merge.drop_duplicates(subset=["nim"], keep="first").copy()
-    nilai_unique = nilai_for_merge.drop_duplicates(subset=["nim"], keep="last").copy()
+    master_names = peserta_unique.set_index("nim")["nama"].to_dict()
+    nilai_for_merge["_source_order"] = range(len(nilai_for_merge))
+    nilai_for_merge["_name_match"] = nilai_for_merge.apply(
+        lambda row: int(
+            normalize_name_for_compare(row.get("nama_nilai", ""))
+            == normalize_name_for_compare(master_names.get(row["nim"], ""))
+            and not is_blank(row.get("nama_nilai", ""))
+        ),
+        axis=1,
+    )
+    score_columns = ["presensi", "bacaan", "hafalan", "evaluasi", "total_nilai", "abjad"]
+    nilai_for_merge["_score_completeness"] = nilai_for_merge.apply(
+        lambda row: (
+            int(not is_blank(row.get("total_nilai", ""))) * 10
+            + int(not is_blank(row.get("abjad", ""))) * 10
+            + sum(not is_blank(row.get(col, "")) for col in score_columns)
+        ),
+        axis=1,
+    )
+    nilai_unique = (
+        nilai_for_merge.sort_values(
+            by=["nim", "_name_match", "_score_completeness", "_source_order"],
+            kind="stable",
+        )
+        .drop_duplicates(subset=["nim"], keep="last")
+        .drop(columns=["_source_order", "_name_match", "_score_completeness"])
+        .copy()
+    )
 
     unmatched_nilai = nilai_unique[~nilai_unique["nim"].isin(peserta_unique["nim"])].copy()
     rekap = peserta_unique.merge(nilai_unique, on="nim", how="left", suffixes=("", "_nilai_file"))
 
     rekap["status_nilai"] = rekap.apply(
-        lambda row: "Belum Ada Nilai" if is_blank(row.get("total_nilai", "")) and is_blank(row.get("abjad", "")) else "Sudah Ada Nilai",
+        lambda row: "Sudah Ada Nilai" if any(not is_blank(row.get(col, "")) for col in score_columns) else "Belum Ada Nilai",
         axis=1,
     )
     rekap["kemiripan_nama"] = rekap.apply(
@@ -115,12 +142,16 @@ def process_rekap(peserta_df: pd.DataFrame, nilai_df: pd.DataFrame) -> Dict[str,
         axis=1,
     )
     rekap["nama_berbeda"] = rekap.apply(
-        lambda row: (not is_blank(row.get("nama_nilai", ""))) and row.get("kemiripan_nama", 1.0) < 0.88,
+        lambda row: (not is_blank(row.get("nama", "")))
+        and (not is_blank(row.get("nama_nilai", "")))
+        and normalize_name_for_compare(row.get("nama", ""))
+        != normalize_name_for_compare(row.get("nama_nilai", "")),
         axis=1,
     )
     rekap["kelas_berbeda"] = rekap.apply(
         lambda row: (
-            not is_blank(row.get("kode_kelas_pai_nilai", ""))
+            not is_blank(row.get("kode_kelas_pai", ""))
+            and not is_blank(row.get("kode_kelas_pai_nilai", ""))
             and normalize_kelas_for_compare(row.get("kode_kelas_pai", ""))
             != normalize_kelas_for_compare(row.get("kode_kelas_pai_nilai", ""))
         ),
@@ -128,36 +159,38 @@ def process_rekap(peserta_df: pd.DataFrame, nilai_df: pd.DataFrame) -> Dict[str,
     )
     rekap["prodi_berbeda"] = rekap.apply(
         lambda row: (
-            not is_blank(row.get("prodi_nilai", ""))
+            not is_blank(row.get("prodi", ""))
+            and not is_blank(row.get("prodi_nilai", ""))
             and normalize_name_for_compare(row.get("prodi", ""))
             != normalize_name_for_compare(prodi_map.get(normalize_text(row.get("prodi_nilai", "")), row.get("prodi_nilai", "")))
         ),
         axis=1,
     )
 
-    def validation_notes(row: pd.Series) -> str:
-        notes: List[str] = []
-        if bool(row.get("nama_berbeda", False)):
-            notes.append("Nama berbeda")
-        if bool(row.get("kelas_berbeda", False)):
-            notes.append("Kode Kelas PAI berbeda")
-        if bool(row.get("prodi_berbeda", False)):
-            notes.append("Program Studi berbeda")
-        if is_blank(row.get("abjad", "")):
-            notes.append("Abjad kosong")
-        if is_blank(row.get("total_nilai", "")):
-            notes.append("Total Nilai kosong")
-        notes.extend(get_score_range_notes(row))
-        return "; ".join(notes) if notes else "-"
-
-    rekap["catatan_validasi"] = rekap.apply(validation_notes, axis=1)
-    rekap["status_validasi"] = rekap["catatan_validasi"].apply(lambda x: "Valid" if x == "-" else "Perlu Dicek")
-
     sort_keys = rekap["kode_kelas_pai"].apply(natural_sort_kelas_key)
     rekap["_sort_angka"] = sort_keys.apply(lambda x: x[0])
     rekap["_sort_huruf"] = sort_keys.apply(lambda x: x[1])
     rekap["_sort_asli"] = sort_keys.apply(lambda x: x[2])
     rekap = rekap.sort_values(by=["_sort_angka", "_sort_huruf", "_sort_asli", "nama"], ascending=True, na_position="last").drop(columns=["_sort_angka", "_sort_huruf", "_sort_asli"])
+
+    data_bermasalah = build_problem_table(peserta_clean, nilai_clean, rekap, unmatched_nilai)
+    notes_by_nim: dict[str, list[str]] = {}
+    for _, problem in data_bermasalah.iterrows():
+        nim = problem["NIM"]
+        if not nim:
+            continue
+        note = problem["Jenis Masalah"]
+        if note in {"Komponen nilai kosong", "Nilai tidak valid atau di luar rentang", "Data identitas kosong di file nilai"}:
+            note += f" ({problem['Kolom']})"
+        notes = notes_by_nim.setdefault(nim, [])
+        if note not in notes:
+            notes.append(note)
+    rekap["catatan_validasi"] = rekap["nim"].apply(
+        lambda nim: "; ".join(notes_by_nim.get(nim, [])) or "-"
+    )
+    rekap["status_validasi"] = rekap["catatan_validasi"].apply(
+        lambda note: "Valid" if note == "-" else "Perlu Dicek"
+    )
 
     sudah_ada_nilai = rekap[rekap["status_nilai"] == "Sudah Ada Nilai"].copy()
     belum_ada_nilai = rekap[rekap["status_nilai"] == "Belum Ada Nilai"].copy()
@@ -184,7 +217,6 @@ def process_rekap(peserta_df: pd.DataFrame, nilai_df: pd.DataFrame) -> Dict[str,
         "perlu_dicek": "Perlu Dicek", "persentase_selesai": "Persentase Selesai (%)",
     })
 
-    data_bermasalah = build_problem_table(peserta_clean, nilai_clean, rekap, unmatched_nilai)
     masalah_ringkasan = data_bermasalah["Jenis Masalah"].value_counts().reset_index() if not data_bermasalah.empty else pd.DataFrame(columns=["Jenis Masalah", "Jumlah"])
     if not masalah_ringkasan.empty:
         masalah_ringkasan.columns = ["Jenis Masalah", "Jumlah"]

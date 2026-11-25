@@ -13,7 +13,11 @@ import type {
   TentorProcessResponse,
 } from "@/types/dashboard";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim() ?? "";
+// URL localhost di browser tamu menunjuk komputer tamu, bukan server ngrok.
+const apiUrl = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(configuredApiUrl)
+  ? ""
+  : configuredApiUrl.replace(/\/$/, "");
 
 export class ApiError extends Error {
   constructor(message: string, public readonly status: number) {
@@ -61,7 +65,8 @@ export async function processRekap(pesertaFile: File, nilaiFile: File): Promise<
   });
 
   if (!response.ok) {
-    let message = "Proses rekap gagal. Silakan coba kembali.";
+    const tunnelError = response.headers.get("ngrok-error-code");
+    let message = `Proses rekap gagal (HTTP ${response.status}${tunnelError ? `, ${tunnelError}` : ""}). Pastikan backend aktif, lalu coba lagi.`;
     try {
       const body: unknown = await response.json();
       if (typeof body === "object" && body !== null && "detail" in body) {

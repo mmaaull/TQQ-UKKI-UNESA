@@ -1,7 +1,9 @@
 Jenis Masalah,Jumlah
-NIM di file nilai tidak ada di file peserta,1
-Abjad kosong,2
-Total Nilai kosong,3
-Nama berbeda antara file peserta dan file nilai,1
+NIM duplikat di file master,2
 NIM duplikat di file nilai,2
+NIM di file nilai tidak ada di file peserta,1
+Peserta belum ada di file nilai,1
+Nama berbeda antara file peserta dan file nilai,1
+Nilai belum diisi,1
+Total Nilai kosong,1
 Nilai tidak valid atau di luar rentang,1

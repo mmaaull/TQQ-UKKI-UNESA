@@ -1,11 +1,11 @@
-Sumber,Jenis Masalah,NIM,Nama File Peserta,Nama File Nilai,Kode Kelas PAI,Jenis Kelamin,Kolom,Nilai Terdeteksi,Keterangan
-File Nilai,NIM di file nilai tidak ada di file peserta,249999,,Peserta Tidak Terdaftar,9Z,,,,"Ada nilai untuk NIM ini, tetapi NIM tidak ditemukan di file peserta."
-File Nilai,Abjad kosong,240006,Fajar Nugroho,,10A,L,,,Kolom ABJAD kosong atau peserta belum ditemukan di file nilai.
-File Nilai,Abjad kosong,240002,Bagas Pratama,Bagas Pratama,1A,L,,,Kolom ABJAD kosong atau peserta belum ditemukan di file nilai.
-File Nilai,Total Nilai kosong,240005,Eka Wulandari,Eka Wulandari,10A,P,,,Kolom TOTAL NILAI kosong atau peserta belum ditemukan di file nilai.
-File Nilai,Total Nilai kosong,240006,Fajar Nugroho,,10A,L,,,Kolom TOTAL NILAI kosong atau peserta belum ditemukan di file nilai.
-File Nilai,Total Nilai kosong,240002,Bagas Pratama,Bagas Pratama,1A,L,,,Kolom TOTAL NILAI kosong atau peserta belum ditemukan di file nilai.
-Gabungan Peserta + Nilai,Nama berbeda antara file peserta dan file nilai,240003,Citra Lestari,Siti Rahma,2B,P,,,Kemiripan nama sekitar 43%. Perlu dicek manual.
-File Nilai,NIM duplikat di file nilai,240004,,Deni Saputra,2B,,,,NIM muncul lebih dari sekali di file nilai. Sistem memakai data terakhir saat rekap.
-File Nilai,NIM duplikat di file nilai,240004,,Deni Saputra,2B,,,,NIM muncul lebih dari sekali di file nilai. Sistem memakai data terakhir saat rekap.
-File Nilai,Nilai tidak valid atau di luar rentang,240003,Citra Lestari,Siti Rahma,2B,P,PRESENSI,105,Kolom PRESENSI bernilai '105' dan di luar rentang 0-100. Rentang yang diterima: 0-100.
+Sumber,Jenis Masalah,NIM,Nama File Peserta,Nama File Nilai,Kode Kelas PAI,Kode Kelas PAI File Nilai,Prodi Master,Prodi File Nilai,Jenis Kelamin,Kolom,Nilai Terdeteksi,Keterangan
+File Master,NIM duplikat di file master,240006,Fajar Nugroho,,10A,,Manajemen,,L,NIM,240006,Baris 1 dari 2 dengan NIM yang sama; rekap memakai baris pertama. Periksa nama dan identitas tiap baris.
+File Master,NIM duplikat di file master,240006,Fajar Nugroho Duplikat,,10A,,Manajemen,,L,NIM,240006,Baris 2 dari 2 dengan NIM yang sama; rekap memakai baris pertama. Periksa nama dan identitas tiap baris.
+File Nilai,NIM duplikat di file nilai,240004,Deni Saputra,Deni Saputra,2B,2B,Sistem Informasi,Sistem Informasi,L,NIM,240004,Baris 1 dari 2 dengan NIM yang sama; rekap memilih nama yang cocok dengan master dan nilai paling lengkap.
+File Nilai,NIM duplikat di file nilai,240004,Deni Saputra,Deni Saputra,2B,2B,Sistem Informasi,Sistem Informasi,L,NIM,240004,Baris 2 dari 2 dengan NIM yang sama; rekap memilih nama yang cocok dengan master dan nilai paling lengkap.
+File Nilai,NIM di file nilai tidak ada di file peserta,249999,,Peserta Tidak Terdaftar,,9Z,,Akuntansi,,NIM,249999,NIM file nilai tidak ditemukan di master; nama juga tidak cocok secara unik dengan master.
+File Master,Peserta belum ada di file nilai,240006,Fajar Nugroho,,10A,,Manajemen,,L,NIM,240006,NIM master tidak ditemukan di file nilai.
+Gabungan Peserta + Nilai,Nama berbeda antara file peserta dan file nilai,240003,Citra Lestari,Siti Rahma,2B,2B,Sistem Informasi,Sistem Informasi,P,NAMA,Siti Rahma,Nama master dan file nilai berbeda (kemiripan sekitar 43%). Periksa NIM dan ejaannya.
+File Nilai,Nilai belum diisi,240002,Bagas Pratama,Bagas Pratama,1A,1A,Teknik Informatika,Teknik Informatika,L,,,"Baris NIM ditemukan, tetapi seluruh kolom nilai dan ABJAD kosong."
+File Nilai,Total Nilai kosong,240005,Eka Wulandari,Eka Wulandari,10A,10A,Manajemen,Manajemen,P,TOTAL NILAI,,Kolom TOTAL NILAI kosong pada baris nilai yang cocok dengan NIM master.
+File Nilai,Nilai tidak valid atau di luar rentang,240003,Citra Lestari,Siti Rahma,2B,2B,Sistem Informasi,Sistem Informasi,P,PRESENSI,105,Kolom PRESENSI bernilai '105' dan di luar rentang 0-100. Rentang yang diterima: 0-100.

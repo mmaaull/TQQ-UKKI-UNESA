@@ -5,16 +5,13 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   async rewrites() {
-    // Proxy /api/* ke backend lokal setiap kali NEXT_PUBLIC_API_URL kosong
-    // (mode same-origin, dipakai misalnya saat berbagi lewat satu tunnel ngrok),
-    // baik di development maupun production build.
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return [];
-    }
+    // Jalur same-origin tetap tersedia untuk localhost dan tunnel ngrok,
+    // termasuk ketika NEXT_PUBLIC_API_URL pernah disetel ke localhost.
+    const backendUrl = (process.env.BACKEND_API_URL?.trim() || "http://127.0.0.1:8000").replace(/\/$/, "");
     return [
       {
         source: "/api/:path*",
-        destination: "http://127.0.0.1:8000/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
       },
     ];
   },

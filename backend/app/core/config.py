@@ -108,13 +108,22 @@ EXPORT_PER_KELAS_COLUMN_LABELS = {
 }
 
 PROBLEM_TYPE_ORDER = [
+    "NIM kosong di file master",
+    "NIM duplikat di file master",
+    "Data identitas kosong di file master",
+    "NIM kosong di file nilai",
+    "NIM duplikat di file nilai",
+    "NIM berbeda antara file master dan file nilai",
     "NIM di file nilai tidak ada di file peserta",
-    "Abjad kosong",
-    "Total Nilai kosong",
+    "Peserta belum ada di file nilai",
+    "Data identitas kosong di file nilai",
     "Nama berbeda antara file peserta dan file nilai",
     "Kode Kelas PAI berbeda antara file peserta dan file nilai",
     "Program Studi berbeda antara file peserta dan file nilai",
-    "NIM duplikat di file nilai",
+    "Nilai belum diisi",
+    "Komponen nilai kosong",
+    "Abjad kosong",
+    "Total Nilai kosong",
     "Nilai tidak valid atau di luar rentang",
 ]
 

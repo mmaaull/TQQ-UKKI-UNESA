@@ -96,6 +96,9 @@ export function ProblemTable({ rows }: ProblemTableProps) {
             <p className="mt-1 text-xs text-slate-500">
               {filteredRows.length} dari {rows.length} data bermasalah yang memerlukan pengecekan
             </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Pencocokan memakai NIM; Nama, Prodi, dan Kode Kelas PAI dari master menjadi acuan.
+            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

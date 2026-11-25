@@ -6,6 +6,9 @@ memilih rekap berdasarkan Prodi atau Kode Kelas PAI. Excel final berisi satu
 sheet per kelompok yang dipilih, dengan peserta diurutkan berdasarkan NIM.
 Variasi penulisan nama Prodi yang sangat mirip disatukan dalam jenjang yang
 sama; Prodi S1 dan D4 tetap dibuat pada sheet terpisah.
+Data Bermasalah mencocokkan NIM dengan master sebagai acuan identitas. Baris
+nilai dengan NIM berbeda, NIM duplikat, kolom identitas kosong, komponen nilai
+kosong, dan nilai di luar rentang dilaporkan terpisah agar mudah diperbaiki.
 
 ## Prasyarat
 
@@ -56,9 +59,15 @@ npm ci
 npm run dev
 ```
 
-Set `NEXT_PUBLIC_API_URL` di `frontend/.env.local` ke URL FastAPI, misalnya
-`http://localhost:8000` untuk development atau `https://api.example.com`
-untuk production. Nilai ini dibaca ketika build frontend.
+Untuk localhost atau berbagi lewat satu tunnel ngrok, kosongkan
+`NEXT_PUBLIC_API_URL` dan arahkan `BACKEND_API_URL` ke backend lokal
+(`http://127.0.0.1:8000`). Next.js meneruskan permintaan `/api/*` ke backend,
+sehingga browser pengguna mengakses frontend dan API melalui domain yang sama.
+Jalankan backend di port 8000, frontend di port 3000, lalu arahkan ngrok ke
+port 3000. Periksa `https://<domain-ngrok>/api/health`; hasil yang benar ialah
+`{"status":"ok"}`. Mulai ulang Next.js setelah mengubah `.env.local`.
+Untuk deployment dengan API publik terpisah, isi `NEXT_PUBLIC_API_URL` dengan
+URL API publik sebelum build frontend.
 
 ### Production build frontend
 
