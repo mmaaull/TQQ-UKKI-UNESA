@@ -4,6 +4,8 @@ Aplikasi rekap nilai TQQ Akbar UNESA menggunakan frontend Next.js dan backend
 FastAPI. Setelah mengunggah file master peserta dan file nilai, pengguna
 memilih rekap berdasarkan Prodi atau Kode Kelas PAI. Excel final berisi satu
 sheet per kelompok yang dipilih, dengan peserta diurutkan berdasarkan NIM.
+Variasi penulisan nama Prodi yang sangat mirip disatukan dalam jenjang yang
+sama; Prodi S1 dan D4 tetap dibuat pada sheet terpisah.
 
 ## Prasyarat
 

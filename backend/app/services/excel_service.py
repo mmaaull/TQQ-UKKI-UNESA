@@ -16,6 +16,7 @@ from backend.app.core.config import (
     SCORE_RANGE_CONFIG,
 )
 from backend.app.utils.helpers import is_blank, safe_filename_part, safe_sheet_name
+from backend.app.utils.prodi import canonical_prodi_map
 
 
 def create_template_excel() -> bytes:
@@ -50,6 +51,11 @@ def _export_excel_grouped(results: Dict[str, pd.DataFrame], group_by: Literal["k
     """Export satu sheet per kelompok dengan isi setiap sheet terurut NIM."""
     output = BytesIO()
     rekap = results["rekap"].copy()
+    if group_by == "prodi" and not rekap.empty:
+        prodi_map = canonical_prodi_map(rekap["prodi"])
+        rekap["prodi"] = rekap["prodi"].apply(
+            lambda value: prodi_map.get(str(value).strip(), value)
+        )
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         if rekap.empty:
             pd.DataFrame(columns=list(EXPORT_PER_KELAS_COLUMN_LABELS.values())).to_excel(writer, sheet_name="Data Kosong", index=False)

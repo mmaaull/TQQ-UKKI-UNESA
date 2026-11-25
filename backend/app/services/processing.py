@@ -9,6 +9,7 @@ from backend.app.core.config import (
     PROBLEM_TYPE_ORDER,
 )
 from backend.app.services.validation import build_problem_table, get_score_range_notes
+from backend.app.utils.prodi import canonical_prodi_map
 from backend.app.utils.helpers import (
     detect_column_mapping,
     is_blank,
@@ -88,6 +89,13 @@ def process_rekap(peserta_df: pd.DataFrame, nilai_df: pd.DataFrame) -> Dict[str,
     if "jenis_kelamin" in peserta_clean.columns:
         peserta_clean["jenis_kelamin"] = peserta_clean["jenis_kelamin"].apply(normalize_gender)
 
+    prodi_map = canonical_prodi_map(
+        list(peserta_clean["prodi"]) + list(nilai_clean["prodi_nilai"])
+    )
+    peserta_clean["prodi"] = peserta_clean["prodi"].apply(
+        lambda value: prodi_map.get(normalize_text(value), normalize_text(value))
+    )
+
     peserta_for_merge = peserta_clean[peserta_clean["nim"].ne("")].copy()
     nilai_for_merge = nilai_clean[nilai_clean["nim"].ne("")].copy()
 
@@ -122,7 +130,7 @@ def process_rekap(peserta_df: pd.DataFrame, nilai_df: pd.DataFrame) -> Dict[str,
         lambda row: (
             not is_blank(row.get("prodi_nilai", ""))
             and normalize_name_for_compare(row.get("prodi", ""))
-            != normalize_name_for_compare(row.get("prodi_nilai", ""))
+            != normalize_name_for_compare(prodi_map.get(normalize_text(row.get("prodi_nilai", "")), row.get("prodi_nilai", "")))
         ),
         axis=1,
     )
