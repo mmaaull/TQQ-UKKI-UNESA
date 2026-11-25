@@ -8,7 +8,6 @@ import type {
   KpiItem,
   RekapProcessResponse,
   RekapRow,
-  RapikanProcessResponse,
   RekapJilidProcessResponse,
   Summary,
   TentorProcessResponse,
@@ -136,33 +135,6 @@ export async function downloadExport(kind: ExportKind, sessionId?: string): Prom
   }
 
   return triggerBrowserDownload(response, `rekap-${kind}.xlsx`);
-}
-
-export async function processRapikan(rekapFile: File): Promise<RapikanProcessResponse> {
-  const formData = new FormData();
-  formData.append("rekap_file", rekapFile);
-  const response = await fetch(`${apiUrl}/api/rapikan/process`, { method: "POST", body: formData });
-  if (!response.ok) {
-    let message = "Proses rapikan gagal. Silakan coba kembali.";
-    try {
-      const body: unknown = await response.json();
-      if (typeof body === "object" && body !== null && "detail" in body) {
-        message = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
-      }
-    } catch {
-      // Gunakan pesan default jika response error bukan JSON.
-    }
-    throw new ApiError(message, response.status);
-  }
-  return response.json() as Promise<RapikanProcessResponse>;
-}
-
-export async function downloadRapikan(sessionId: string): Promise<string> {
-  const response = await fetch(`${apiUrl}/api/rapikan/${sessionId}/download`);
-  if (!response.ok) {
-    throw new ApiError("Unduhan hasil rapikan gagal. Silakan proses ulang file.", response.status);
-  }
-  return triggerBrowserDownload(response, "rekap_tqq_per_kode_kelas_dan_prodi.xlsx");
 }
 
 export async function processRekapJilid(masterFile: File, penilaianFile: File): Promise<RekapJilidProcessResponse> {

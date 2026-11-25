@@ -67,13 +67,6 @@ export type RekapProcessResponse = {
   data_bermasalah: ApiRecord[];
 };
 
-export type RapikanProcessResponse = {
-  session_id: string;
-  summary: { total_data: number; total_sheet: number };
-  preview: ApiRecord[];
-  sheet_preview: ApiRecord[];
-};
-
 export type RekapJilidProcessResponse = {
   session_id: string;
   summary: {
