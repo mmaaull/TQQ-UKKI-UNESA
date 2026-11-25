@@ -16,9 +16,9 @@ const exportItems: ExportItem[] = [
   { kind: "template", title: "Download Template", description: "Template Excel untuk input data", requiresSession: false, icon: FileSpreadsheet },
 ];
 
-export type ExportSectionProps = { sessionId?: string | null; groupBy: RekapGroupBy; onGroupByChange: (value: RekapGroupBy) => void };
+export type ExportSectionProps = { sessionId?: string | null; groupBy: RekapGroupBy | null };
 
-export function ExportSection({ sessionId, groupBy, onGroupByChange }: ExportSectionProps) {
+export function ExportSection({ sessionId, groupBy }: ExportSectionProps) {
   const [status, setStatus] = useState<Record<ExportKind, ExportStatus>>({ final: "idle", "final-per-prodi": "idle", validasi: "idle", "data-bermasalah": "idle", "per-kelas": "idle", template: "idle" });
   const [message, setMessage] = useState("");
   const downloadSucceeded = message.includes("berhasil");
@@ -50,22 +50,22 @@ export function ExportSection({ sessionId, groupBy, onGroupByChange }: ExportSec
         {exportItems.map((item) => {
           const actualKind = item.kind === "final" && groupBy === "prodi" ? "final-per-prodi" : item.kind;
           const currentStatus = status[actualKind];
-          const unavailable = item.requiresSession && !sessionId;
+          const unavailable = item.requiresSession && (!sessionId || !groupBy);
           const isDownloading = currentStatus === "downloading";
           const Icon = isDownloading ? LoaderCircle : currentStatus === "success" ? CheckCircle2 : item.icon;
           return (
             <article className="flex min-h-40 flex-col rounded-xl border border-slate-200 p-4" key={item.kind}>
               <div className="flex size-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700"><Icon className={isDownloading ? "animate-spin" : ""} size={19} /></div>
               <h3 className="mt-3 text-sm font-semibold text-slate-900">{item.title}</h3>
-              <p className="mt-1 flex-1 text-xs leading-5 text-slate-500">{item.description}</p>
+              <p className="mt-1 flex-1 text-xs leading-5 text-slate-500">
+                {item.kind === "final" && groupBy
+                  ? `Satu sheet per ${groupBy === "prodi" ? "Prodi" : "Kode Kelas PAI"}, diurutkan berdasarkan NIM.`
+                  : item.description}
+              </p>
               {item.kind === "final" && (
-                <label className="mt-3 flex flex-col gap-1 text-xs font-medium text-slate-700">
-                  Kelompokkan sheet berdasarkan
-                  <select className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700" onChange={(event) => onGroupByChange(event.target.value as RekapGroupBy)} value={groupBy}>
-                    <option value="kode_kelas_pai">Kode Kelas PAI</option>
-                    <option value="prodi">Prodi</option>
-                  </select>
-                </label>
+                <p className="mt-3 text-xs font-medium text-blue-700">
+                  {groupBy ? `Pilihan rekap: ${groupBy === "prodi" ? "Prodi" : "Kode Kelas PAI"}` : "Pilih jenis rekap pada langkah proses"}
+                </p>
               )}
               <button className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400" disabled={unavailable || isDownloading} onClick={() => handleDownload(item.kind)} type="button"><Download size={14} />{isDownloading ? "Mengunduh..." : "Download"}</button>
             </article>

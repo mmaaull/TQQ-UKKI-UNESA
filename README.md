@@ -1,8 +1,9 @@
 # Rekap Nilai TQQ Akbar UNESA
 
 Aplikasi rekap nilai TQQ Akbar UNESA menggunakan frontend Next.js dan backend
-FastAPI. Logic rekap, validasi, export Excel, dan mode rapikan berada pada
-service backend serta dijaga oleh baseline test.
+FastAPI. Setelah mengunggah file master peserta dan file nilai, pengguna
+memilih rekap berdasarkan Prodi atau Kode Kelas PAI. Excel final berisi satu
+sheet per kelompok yang dipilih, dengan peserta diurutkan berdasarkan NIM.
 
 ## Prasyarat
 
@@ -40,7 +41,7 @@ Jalankan production server, misalnya:
 uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
 ```
 
-> Hasil rekap dan rapikan saat ini menggunakan session sementara di memori.
+> Hasil rekap saat ini menggunakan session sementara di memori.
 > Untuk deployment saat ini gunakan satu worker/backend instance atau sticky
 > routing. Penyimpanan persisten dapat ditambahkan pada tahap terpisah.
 

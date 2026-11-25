@@ -43,7 +43,7 @@ const guideTabs: Record<
     steps: [
       {
         step: "1",
-        title: "Upload File Peserta & Nilai",
+        title: "Upload File Master Peserta & Nilai",
         description:
           "Pilih atau tarik file Excel Data Peserta dan File Nilai (.xlsx / .xls) sesuai dengan format kolom yang ditentukan.",
         icon: FileSpreadsheet,
@@ -53,7 +53,7 @@ const guideTabs: Record<
         step: "2",
         title: "Proses Rekap & Validasi",
         description:
-          "Klik tombol 'Proses Rekap & Validasi'. Sistem akan mencocokkan NIM dan Nama secara otomatis serta menghitung statistik.",
+          "Pilih rekap berdasarkan Prodi atau Kode Kelas PAI, lalu klik 'Proses Rekap & Validasi'. Sistem mencocokkan NIM dan Nama serta menghitung statistik.",
         icon: Play,
         color: "bg-indigo-50 text-indigo-600 border-indigo-100",
       },
@@ -75,9 +75,9 @@ const guideTabs: Record<
       },
       {
         step: "5",
-        title: "Export & Mode Rapikan",
+        title: "Unduh Hasil Rekap",
         description:
-          "Pilih Excel final per Kode Kelas PAI atau Prodi (setiap sheet urut NIM), unduh laporan validasi atau arsip ZIP per kelas, dan gunakan 'Rapikan Hasil Rekap' bila diperlukan.",
+          "Unduh Excel final sesuai pilihan pada langkah proses. Setiap sheet diurutkan berdasarkan NIM. Laporan validasi dan arsip ZIP per kelas juga tersedia.",
         icon: Download,
         color: "bg-sky-50 text-sky-600 border-sky-100",
       },

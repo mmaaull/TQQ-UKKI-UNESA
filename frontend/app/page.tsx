@@ -9,7 +9,6 @@ import { ExportSection } from "@/components/ExportSection";
 import { ProblemTable } from "@/components/ProblemTable";
 import { ProcessCard } from "@/components/ProcessCard";
 import { ProgressChart } from "@/components/ProgressChart";
-import { RapikanSection } from "@/components/RapikanSection";
 import { RekapTable } from "@/components/RekapTable";
 import { StatCard } from "@/components/StatCard";
 import { UploadCard } from "@/components/UploadCard";
@@ -50,7 +49,7 @@ export default function RekapNilaiPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [processedAt, setProcessedAt] = useState("");
   const [uploadResetKey, setUploadResetKey] = useState(0);
-  const [groupBy, setGroupBy] = useState<RekapGroupBy>("kode_kelas_pai");
+  const [groupBy, setGroupBy] = useState<RekapGroupBy | null>(null);
 
   const [isClassDetailOpen, setIsClassDetailOpen] = useState(false);
 
@@ -82,6 +81,7 @@ export default function RekapNilaiPage() {
     setPesertaFile(nextPesertaFile);
     setNilaiFile(nextNilaiFile);
     resetResultState();
+    setGroupBy(null);
     setStatus(nextPesertaFile && nextNilaiFile ? "ready" : "idle");
   }
 
@@ -90,6 +90,7 @@ export default function RekapNilaiPage() {
     setNilaiFile(null);
     setUploadResetKey((value) => value + 1);
     resetResultState();
+    setGroupBy(null);
     setStatus("idle");
   }
 
@@ -99,7 +100,7 @@ export default function RekapNilaiPage() {
   }
 
   async function handleProcess() {
-    if (!pesertaFile || !nilaiFile || status !== "ready") return;
+    if (!pesertaFile || !nilaiFile || !groupBy || status !== "ready") return;
 
     setError("");
     setStatus("processing");
@@ -157,7 +158,7 @@ export default function RekapNilaiPage() {
             disabled={isProcessing}
             key={`peserta-${uploadResetKey}`}
             kind="peserta"
-            title="File Peserta"
+            title="File Master Peserta"
             description="Kolom: Nama, Jenis Kelamin, NIM, Kelas PAI, Program Studi"
             onFileChange={(file) => setSelectedFile("peserta", file)}
           />
@@ -171,6 +172,8 @@ export default function RekapNilaiPage() {
           />
           <ProcessCard
             error={error}
+            groupBy={groupBy}
+            onGroupByChange={setGroupBy}
             onProcess={handleProcess}
             onReset={handleReset}
             onRetry={handleRetry}
@@ -182,7 +185,7 @@ export default function RekapNilaiPage() {
           <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-sm">
             <p className="flex items-center gap-2 font-medium">
               <ShieldCheck className="shrink-0 text-emerald-600" size={18} />
-              <span>Data rekap berhasil diproses dan siap diunduh pada bagian Export Hasil.</span>
+              <span>Data rekap berhasil diproses. Excel final dikelompokkan berdasarkan {groupBy === "prodi" ? "Prodi" : "Kode Kelas PAI"}.</span>
             </p>
             <span className="hidden shrink-0 rounded-md bg-emerald-100/80 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 sm:inline-block">
               Sesi Aktif
@@ -232,8 +235,7 @@ export default function RekapNilaiPage() {
             </section>
 
             <RekapTable
-              groupBy={groupBy}
-              onGroupByChange={setGroupBy}
+              groupBy={groupBy ?? "prodi"}
               rows={rekapRows}
               subtitle={`Menampilkan ${rekapRows.length} data hasil rekap`}
             />
@@ -252,9 +254,7 @@ export default function RekapNilaiPage() {
           </section>
         )}
 
-        <ExportSection groupBy={groupBy} onGroupByChange={setGroupBy} sessionId={sessionId} />
-
-        <RapikanSection />
+        <ExportSection groupBy={groupBy} sessionId={sessionId} />
       </main>
     </>
   );

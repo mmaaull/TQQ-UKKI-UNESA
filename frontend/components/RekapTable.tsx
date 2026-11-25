@@ -7,7 +7,7 @@ import type { RekapGroupBy, RekapRow } from "@/types/dashboard";
 
 import { FilterBar } from "./FilterBar";
 
-export type RekapTableProps = { rows: RekapRow[]; groupBy: RekapGroupBy; onGroupByChange: (value: RekapGroupBy) => void; title?: string; subtitle?: string };
+export type RekapTableProps = { rows: RekapRow[]; groupBy: RekapGroupBy; title?: string; subtitle?: string };
 
 const columns = [
   "No",
@@ -28,7 +28,7 @@ const columns = [
 
 const ITEMS_PER_PAGE = 10;
 
-export function RekapTable({ rows, groupBy, onGroupByChange, title = "Preview Hasil Rekap", subtitle }: RekapTableProps) {
+export function RekapTable({ rows, groupBy, title = "Preview Hasil Rekap", subtitle }: RekapTableProps) {
   const [search, setSearch] = useState("");
   const [kelas, setKelas] = useState("");
   const [prodi, setProdi] = useState("");
@@ -112,13 +112,9 @@ export function RekapTable({ rows, groupBy, onGroupByChange, title = "Preview Ha
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <label className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-700">
-              Urut per
-              <select className="bg-transparent text-xs outline-none" onChange={(event) => onGroupByChange(event.target.value as RekapGroupBy)} value={groupBy}>
-                <option value="kode_kelas_pai">Kode Kelas PAI, lalu NIM</option>
-                <option value="prodi">Prodi, lalu NIM</option>
-              </select>
-            </label>
+            <span className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-700">
+              Urut per {groupBy === "prodi" ? "Prodi" : "Kode Kelas PAI"}, lalu NIM
+            </span>
             <FilterBar
               kelasOptions={kelasOptions}
               onKelasChange={setKelas}

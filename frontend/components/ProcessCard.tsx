@@ -1,12 +1,14 @@
 import { CheckCircle2, LoaderCircle, LockKeyhole, Play, RotateCcw, TriangleAlert } from "lucide-react";
 
-import type { ProcessStatus } from "@/types/dashboard";
+import type { ProcessStatus, RekapGroupBy } from "@/types/dashboard";
 
 export type ProcessCardProps = {
   error?: string;
   onProcess?: () => void;
   onReset?: () => void;
   onRetry?: () => void;
+  groupBy: RekapGroupBy | null;
+  onGroupByChange: (value: RekapGroupBy) => void;
   status?: ProcessStatus;
 };
 
@@ -18,9 +20,10 @@ const statusLabel: Record<ProcessStatus, string> = {
   error: "Perbaiki atau Coba Lagi",
 };
 
-export function ProcessCard({ error, onProcess, onReset, onRetry, status = "idle" }: ProcessCardProps) {
+export function ProcessCard({ error, groupBy, onGroupByChange, onProcess, onReset, onRetry, status = "idle" }: ProcessCardProps) {
   const inProgress = status === "processing";
-  const canProcess = status === "ready";
+  const canProcess = status === "ready" && groupBy !== null;
+  const canChooseGroup = status === "ready" || status === "success" || status === "error";
   const isPlayIcon = status === "idle" || status === "ready";
   const Icon = inProgress
     ? LoaderCircle
@@ -33,13 +36,39 @@ export function ProcessCard({ error, onProcess, onReset, onRetry, status = "idle
   return (
     <article className="flex min-h-[292px] flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
       <div>
-        <h2 className="text-base font-semibold text-slate-900">Mulai Proses</h2>
+        <h2 className="text-base font-semibold text-slate-900">Pilih Jenis Rekap</h2>
         <p className="mt-1 text-xs leading-5 text-slate-500">
-          Upload kedua file untuk melanjutkan proses rekap
+          Upload kedua file, lalu pilih pengelompokan hasil Excel.
         </p>
       </div>
 
       <div className="flex flex-1 flex-col justify-center">
+        <fieldset className="mb-4 space-y-2" disabled={!canChooseGroup}>
+          <legend className="mb-2 text-xs font-semibold text-slate-700">Sheet Excel berdasarkan</legend>
+          {([
+            { value: "prodi", label: "Prodi" },
+            { value: "kode_kelas_pai", label: "Kode Kelas PAI" },
+          ] as const).map((option) => (
+            <label
+              className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                groupBy === option.value
+                  ? "border-blue-600 bg-blue-50 text-blue-800"
+                  : "border-slate-200 text-slate-700 hover:border-blue-300"
+              } ${!canChooseGroup ? "cursor-not-allowed opacity-50" : ""}`}
+              key={option.value}
+            >
+              <input
+                checked={groupBy === option.value}
+                className="accent-blue-700"
+                name="rekap-group-by"
+                onChange={() => onGroupByChange(option.value)}
+                type="radio"
+                value={option.value}
+              />
+              Rekap berdasarkan {option.label}
+            </label>
+          ))}
+        </fieldset>
         <button
           className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold shadow-sm transition ${
             canProcess
@@ -96,7 +125,11 @@ export function ProcessCard({ error, onProcess, onReset, onRetry, status = "idle
         ) : (
           <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-slate-500">
             <LockKeyhole className="mt-0.5 shrink-0" size={15} />
-            Tombol akan aktif setelah kedua file berhasil diupload
+            {status === "ready"
+              ? groupBy
+                ? "Jenis rekap sudah dipilih. Klik tombol untuk memproses kedua file."
+                : "Pilih jenis rekap untuk mengaktifkan tombol proses."
+              : "Tombol akan aktif setelah kedua file diunggah dan jenis rekap dipilih."}
           </p>
         )}
       </div>
